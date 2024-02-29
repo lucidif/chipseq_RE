@@ -81,6 +81,7 @@ include { MULTIQC_CUSTOM_PEAKS                } from '../modules/local/multiqc_c
 include { INPUT_CHECK         } from '../subworkflows/local/input_check'
 include { PREPARE_GENOME      } from '../subworkflows/local/prepare_genome'
 include { FILTER_BAM_BAMTOOLS } from '../subworkflows/local/filter_bam_bamtools'
+include { ALIGN_BOWTIE2          } from '../subworkflows/local/align_bowtie2'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,7 +116,7 @@ include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_CONSENSUS } from '../module
 
 include { FASTQC_TRIMGALORE      } from '../subworkflows/nf-core/fastqc_trimgalore'
 include { ALIGN_BWA_MEM          } from '../subworkflows/nf-core/align_bwa_mem'
-include { ALIGN_BOWTIE2          } from '../subworkflows/nf-core/align_bowtie2'
+//include { ALIGN_BOWTIE2          } from '../subworkflows/nf-core/align_bowtie2'
 include { ALIGN_CHROMAP          } from '../subworkflows/nf-core/align_chromap'
 include { ALIGN_STAR             } from '../subworkflows/nf-core/align_star'
 include { MARK_DUPLICATES_PICARD } from '../subworkflows/nf-core/mark_duplicates_picard'
@@ -187,7 +188,8 @@ workflow CHIPSEQ {
     if (params.aligner == 'bowtie2') {
         ALIGN_BOWTIE2 (
             FASTQC_TRIMGALORE.out.reads,
-            PREPARE_GENOME.out.bowtie2_index,
+            //PREPARE_GENOME.out.bowtie2_index, //TODO ho messo direttamente l'index da parametro senza passare per prepare genome, va fatto meglio
+            params.bowtie2_spikeref_index,
             params.save_unaligned
         )
         ch_genome_bam        = ALIGN_BOWTIE2.out.bam

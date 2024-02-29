@@ -161,6 +161,24 @@
                     "fa_icon": "fas fa-ban",
                     "hidden": true,
                     "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
+                },
+                "reference_genome": {
+                    "type": "string",
+                    "description": "Name of reference genome",
+                    "fa_icon": "fas fa-book",
+                    "help_text": "the name of genome in reference file, according to oua standard the fasta reference used by indexing must have all chromosomome of reference genome called with [reference_genome]_chr_[chromosome]"
+                },
+                "spikein_genome": {
+                    "type": "string",
+                    "description": "Name of spike in genome",
+                    "fa_icon": "fas fa-book",
+                    "help_text": "the name of genome in reference file, according to our standard the fasta reference used by indexing must have all chromosomome of spike-in genome called with [spikein_genome]_chr_[chromosome]"
+                },
+                "bowtie2_spikeref_index": {
+                    "type": "string",
+                    "format": "path",
+                    "fa_icon": "fas fa-bezier-curve",
+                    "description": "Path to directoryfor pre-built Bowtie2 index. for hybrid spikein - reference genome"
                 }
             }
         },
