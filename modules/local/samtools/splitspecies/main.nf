@@ -2,10 +2,14 @@ process SAMTOOLS_SPLITSPECIES {
     tag "$meta.id"
     label 'process_low'
 
-    conda "${moduleDir}/environment.yml"
+    // conda "${moduleDir}/environment.yml"
+    // container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    //     'https://depot.galaxyproject.org/singularity/samtools:1.18--h50ea8bc_1' :
+    //     'quay.io/biocontainers/samtools:1.18--h50ea8bc_1' }"
+    conda (params.enable_conda ? "bioconda::samtools=1.15.1" : null)
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/samtools:1.18--h50ea8bc_1' :
-        'quay.io/biocontainers/samtools:1.18--h50ea8bc_1' }"
+        'https://depot.galaxyproject.org/singularity/samtools:1.15.1--h1170115_0' :
+        'quay.io/biocontainers/samtools:1.15.1--h1170115_0' }"
 
     //if workflow don't find the docker image sudo docker pull quay.io/biocontainers/samtools:1.18--h50ea8bc_1 TODO risolvi il problema al primo aggiornamento stabile che fanno (in cui dovrebbero passare a samtools 1.18)   
 
@@ -58,7 +62,8 @@ process SAMTOOLS_SPLITSPECIES {
         -h \\
         ${input} | grep -v ${ref_name} | sed s/${spikein_name}\\_chr/chr/g | samtools view -bhS - > ${meta.id}_${spikein_name}.bam 
 
-    samtools index -M *.bam
+    samtools index ${meta.id}_${ref_name}.bam ${meta.id}_${ref_name}.bam.bai
+    samtools index ${meta.id}_${spikein_name}.bam ${meta.id}_${spikein_name}.bam.bai
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
