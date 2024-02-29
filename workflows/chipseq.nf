@@ -186,10 +186,11 @@ workflow CHIPSEQ {
     // SUBWORKFLOW: Alignment with Bowtie2 & BAM QC
     //
     if (params.aligner == 'bowtie2') {
+        ch_bowtie2_index = [ [:], file(params.bowtie2_spikeref_index) ]
         ALIGN_BOWTIE2 (
             FASTQC_TRIMGALORE.out.reads,
             //PREPARE_GENOME.out.bowtie2_index, //TODO ho messo direttamente l'index da parametro senza passare per prepare genome, va fatto meglio
-            params.bowtie2_spikeref_index,
+            ch_bowtie2_index,
             params.save_unaligned
         )
         ch_genome_bam        = ALIGN_BOWTIE2.out.bam

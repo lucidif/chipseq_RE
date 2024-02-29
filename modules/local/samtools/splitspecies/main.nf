@@ -11,17 +11,20 @@ process SAMTOOLS_SPLITSPECIES {
 
     input:
     tuple val(meta), path(input)
+    val ref_name
+    val spikein_name
+
     //tuple val(meta2), path(fasta)
 
 
     output:
-    //tuple val(meta), path("*_${ref_name}.bam"), path("*_${ref_name}.bam.bai") ,  emit: refbam
-    //tuple val(meta), path("*_${spikein_name}.bam"), path("*_${spikein_name}.bam.bai") ,  emit: spikebam
-    tuple val(meta), path("*_${ref_name}.bam"), path("*_${spikein_name}.bam") ,  emit: allbam
+    tuple val(meta), path("*_${ref_name}.bam"), path("*_${ref_name}.bam.bai") ,  emit: refbambai
+    tuple val(meta), path("*_${spikein_name}.bam"), path("*_${spikein_name}.bam.bai") ,  emit: spikebambai
+    //tuple val(meta), path("*_${ref_name}.bam"), path("*_${spikein_name}.bam") ,  emit: allbam
     tuple val(meta), path("*_${ref_name}.bam") ,  emit: refbam
-    tuple val(meta), path("*_${ref_name}.bam.bai"), path("*_${spikein_name}.bam.bai"), emit : bai
-    tuple val(meta), path("*_${ref_name}.bam"), path("*_${ref_name}.bam.bai"), emit: refpath
-    tuple val(meta), path("*_${spikein_name}.bam"), path("*_${spikein_name}.bam.bai"), emit: spikepath
+    //tuple val(meta), path("*_${ref_name}.bam.bai"), path("*_${spikein_name}.bam.bai"), emit : bai
+    //tuple val(meta), path("*_${ref_name}.bam"), path("*_${ref_name}.bam.bai"), emit: refpath
+    //tuple val(meta), path("*_${spikein_name}.bam"), path("*_${spikein_name}.bam.bai"), emit: spikepath
 
     path  "versions.yml",            emit: versions
 
@@ -39,8 +42,7 @@ process SAMTOOLS_SPLITSPECIES {
     //                 args.contains("--output-fmt cram") ? "cram" :
     //                 input.getExtension()
     //def filter_params    = meta.single_end ? '-F 0x004' : '-F 0x004 -F 0x0008 -f 0x001'
-    def spikein_name     = params.spikein_genome
-    def ref_name         = params.reference_genome
+
 
     """
 

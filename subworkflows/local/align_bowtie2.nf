@@ -2,7 +2,7 @@
  * Map reads, sort, index BAM file and run samtools stats, flagstat and idxstats
  */
 
-include { BOWTIE2_ALIGN     } from '../../modules/nf-core/modules/bowtie2/align/main'
+include { BOWTIE2_ALIGN     } from '../../modules/local/bowtie2/align/main'
 include { SAMTOOLS_SPLITSPECIES } from '../../modules/local/samtools/splitspecies/main'
 include { BAM_SORT_SAMTOOLS } from '../nf-core/bam_sort_samtools'
 
@@ -20,11 +20,19 @@ workflow ALIGN_BOWTIE2 {
     //
     // Map reads with BWA
     //
-    BOWTIE2_ALIGN(reads, index, save_unaligned, false)
+
+    BOWTIE2_ALIGN(
+        reads, 
+        index, 
+        save_unaligned, 
+        "sort"
+        )
     ch_versions = ch_versions.mix(BOWTIE2_ALIGN.out.versions.first())
 
     SAMTOOLS_SPLITSPECIES (
-        BOWTIE2_ALIGN.out.bam
+        BOWTIE2_ALIGN.out.aligned,
+        params.reference_genome,
+        params.spikein_genome
         )
 
     //
