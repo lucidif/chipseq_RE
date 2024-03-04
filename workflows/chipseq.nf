@@ -4,6 +4,11 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Modify fasta channel to include meta data
+if (params.fasta) { ch_fasta =  Channel.fromPath(params.fasta) } else { exit 1, 'Fasta reference genome not specified!' }
+ch_fasta_meta = ch_fasta.map{ it -> [[id:it[0].baseName], it] }.collect()
+//ch_fasta_meta.view()
+
 def valid_params = [
     aligners       : [ 'bwa', 'bowtie2', 'chromap', 'star' ]
 ]
@@ -98,6 +103,7 @@ include { PICARD_COLLECTMULTIPLEMETRICS } from '../modules/nf-core/modules/picar
 include { PRESEQ_LCEXTRAP               } from '../modules/nf-core/modules/preseq/lcextrap/main'
 include { PHANTOMPEAKQUALTOOLS          } from '../modules/nf-core/modules/phantompeakqualtools/main'
 include { UCSC_BEDGRAPHTOBIGWIG         } from '../modules/nf-core/modules/ucsc/bedgraphtobigwig/main'
+include { UCSC_BEDGRAPHTOBIGWIG  as RAW_UCSC_BEDGRAPHTOBIGWIG } from '../modules/nf-core/modules/ucsc/bedgraphtobigwig/main'
 include { DEEPTOOLS_COMPUTEMATRIX       } from '../modules/nf-core/modules/deeptools/computematrix/main'
 include { DEEPTOOLS_PLOTPROFILE         } from '../modules/nf-core/modules/deeptools/plotprofile/main'
 include { DEEPTOOLS_PLOTHEATMAP         } from '../modules/nf-core/modules/deeptools/plotheatmap/main'
@@ -106,6 +112,9 @@ include { KHMER_UNIQUEKMERS             } from '../modules/nf-core/modules/khmer
 include { MACS2_CALLPEAK                } from '../modules/nf-core/modules/macs2/callpeak/main'
 include { SUBREAD_FEATURECOUNTS         } from '../modules/nf-core/modules/subread/featurecounts/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
+include { SAMTOOLS_FAIDX                } from '../modules/nf-core/modules/samtools/faidx/main'
+include { SAMTOOLS_INDEX                } from '../modules/nf-core/modules/samtools/index/main'
+include { DEEPTOOLS_BAMCOVERAGE         } from '../modules/nf-core/modules/deeptools/bamcoverage/main'
 
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_MACS2     } from '../modules/nf-core/modules/homer/annotatepeaks/main'
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_CONSENSUS } from '../modules/nf-core/modules/homer/annotatepeaks/main'
@@ -133,6 +142,16 @@ def multiqc_report = []
 workflow CHIPSEQ {
 
     ch_versions = Channel.empty()
+
+    SAMTOOLS_FAIDX (
+            ch_fasta_meta,
+            [[], []]
+        )
+
+    //ch_fasta_meta.set{faidx_path}
+    //ch_fasta_meta.view()
+    SAMTOOLS_FAIDX.out.fai.map{meta,path -> [path]}.set{faidx_path}
+
 
     //
     // SUBWORKFLOW: Uncompress and prepare reference genome files
@@ -355,6 +374,24 @@ workflow CHIPSEQ {
     )
 
     //
+    // MODULE: deeptools bigwig
+    //
+
+    //FILTER_BAM_BAMTOOLS.out.bam
+    //FILTER_BAM_BAMTOOLS.out.bam.view()
+
+    SAMTOOLS_INDEX(FILTER_BAM_BAMTOOLS.out.bam)
+
+    ch_deepcov=FILTER_BAM_BAMTOOLS.out.bam.join(SAMTOOLS_INDEX.out.bai, by: [0])
+
+    DEEPTOOLS_BAMCOVERAGE (
+        ch_deepcov,
+        params.fasta,
+        faidx_path
+    )
+
+
+    //
     // MODULE: BedGraph coverage tracks
     //
     BEDTOOLS_GENOMECOV (
@@ -369,6 +406,12 @@ workflow CHIPSEQ {
         BEDTOOLS_GENOMECOV.out.bedgraph,
         PREPARE_GENOME.out.chrom_sizes
     )
+
+    RAW_UCSC_BEDGRAPHTOBIGWIG (
+        BEDTOOLS_GENOMECOV.out.rawbedgraph,
+        PREPARE_GENOME.out.chrom_sizes
+    )
+
     ch_versions = ch_versions.mix(UCSC_BEDGRAPHTOBIGWIG.out.versions.first())
 
     ch_deeptoolsplotprofile_multiqc = Channel.empty()
