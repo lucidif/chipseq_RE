@@ -281,6 +281,12 @@
                     "hidden": true,
                     "description": "BAMTools JSON file with custom filters for single-end data.",
                     "fa_icon": "fas fa-cog"
+                },
+                "filters_disable": {
+                    "type": "boolean",
+                    "fa_icon": "fas fa-save",
+                    "description": "Disable quality control steps",
+                    "help_text": "Disable quality control steps"   
                 }
             }
         },

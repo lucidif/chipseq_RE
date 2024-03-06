@@ -327,7 +327,22 @@ workflow CHIPSEQ {
         ch_bamtools_filter_se_config,
         ch_bamtools_filter_pe_config
     )
+
     ch_versions = ch_versions.mix(FILTER_BAM_BAMTOOLS.out.versions.first().ifEmpty(null))
+    ch_bam_to_analyze = FILTER_BAM_BAMTOOLS.out.bam
+    ch_flagstats_to_analyze = FILTER_BAM_BAMTOOLS.out.flagstat
+    ch_stats_to_analyze = FILTER_BAM_BAMTOOLS.out.stats
+    ch_idxstats_to_analyze = FILTER_BAM_BAMTOOLS.out.idxstats
+    //
+    // FILTER DISABLE
+    //
+    if(params.filters_disable){
+        ch_bam_to_analyze = MARK_DUPLICATES_PICARD.out.bam
+        ch_flagstats_to_analyze = MARK_DUPLICATES_PICARD.out.flagstat
+        ch_stats_to_analyze = MARK_DUPLICATES_PICARD.out.stats
+        ch_idxstats_to_analyze = MARK_DUPLICATES_PICARD.out.idxstats
+    }
+
 
     //
     // MODULE: Preseq coverage analysis
@@ -347,7 +362,7 @@ workflow CHIPSEQ {
     ch_picardcollectmultiplemetrics_multiqc = Channel.empty()
     if (!params.skip_picard_metrics) {
         PICARD_COLLECTMULTIPLEMETRICS (
-            FILTER_BAM_BAMTOOLS.out.bam,
+            ch_bam_to_analyze,
             PREPARE_GENOME.out.fasta,
             []
         )
@@ -359,7 +374,7 @@ workflow CHIPSEQ {
     // MODULE: Phantompeaktools strand cross-correlation and QC metrics
     //
     PHANTOMPEAKQUALTOOLS (
-        FILTER_BAM_BAMTOOLS.out.bam
+        ch_bam_to_analyze
     )
     ch_versions = ch_versions.mix(PHANTOMPEAKQUALTOOLS.out.versions.first())
 
@@ -377,12 +392,12 @@ workflow CHIPSEQ {
     // MODULE: deeptools bigwig
     //
 
-    //FILTER_BAM_BAMTOOLS.out.bam
-    //FILTER_BAM_BAMTOOLS.out.bam.view()
+    //ch_bam_to_analyze
+    //ch_bam_to_analyze.view()
 
-    SAMTOOLS_INDEX(FILTER_BAM_BAMTOOLS.out.bam)
+    SAMTOOLS_INDEX(ch_bam_to_analyze)
 
-    ch_deepcov=FILTER_BAM_BAMTOOLS.out.bam.join(SAMTOOLS_INDEX.out.bai, by: [0])
+    ch_deepcov=ch_bam_to_analyze.join(SAMTOOLS_INDEX.out.bai, by: [0])
 
     DEEPTOOLS_BAMCOVERAGE (
         ch_deepcov,
@@ -395,7 +410,7 @@ workflow CHIPSEQ {
     // MODULE: BedGraph coverage tracks
     //
     BEDTOOLS_GENOMECOV (
-        FILTER_BAM_BAMTOOLS.out.bam.join(FILTER_BAM_BAMTOOLS.out.flagstat, by: [0])
+        ch_bam_to_analyze.join(ch_flagstats_to_analyze, by: [0])
     )
     ch_versions = ch_versions.mix(BEDTOOLS_GENOMECOV.out.versions.first())
 
@@ -745,9 +760,9 @@ workflow CHIPSEQ {
             MARK_DUPLICATES_PICARD.out.idxstats.collect{it[1]}.ifEmpty([]),
             MARK_DUPLICATES_PICARD.out.metrics.collect{it[1]}.ifEmpty([]),
 
-            FILTER_BAM_BAMTOOLS.out.stats.collect{it[1]}.ifEmpty([]),
-            FILTER_BAM_BAMTOOLS.out.flagstat.collect{it[1]}.ifEmpty([]),
-            FILTER_BAM_BAMTOOLS.out.idxstats.collect{it[1]}.ifEmpty([]),
+            ch_stats_to_analyze.collect{it[1]}.ifEmpty([]),
+            ch_flagstats_to_analyze.collect{it[1]}.ifEmpty([]),
+            ch_idxstats_to_analyze.collect{it[1]}.ifEmpty([]),
             ch_picardcollectmultiplemetrics_multiqc.collect{it[1]}.ifEmpty([]),
 
             ch_preseq_multiqc.collect{it[1]}.ifEmpty([]),
