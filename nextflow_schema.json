@@ -39,6 +39,11 @@
                     "fa_icon": "fas fa-chart-area",
                     "enum": [50, 75, 100, 150, 200]
                 },
+                "effectiveGenomeSize" : {
+                    "type": "integer",
+                    "description": "length of the 'mappable' genome",
+                    "fa_icon": "fas fa-chart-area"
+                }, 
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",
@@ -174,7 +179,29 @@
                     "fa_icon": "fas fa-book",
                     "help_text": "the name of genome in reference file, according to our standard the fasta reference used by indexing must have all chromosomome of spike-in genome called with [spikein_genome]_chr_[chromosome]"
                 },
+                "spikein_fasta": {
+                    "type": "string",
+                    "format": "file-path",
+                    "mimetype": "text/plain",
+                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
+                    "description": "Path to FASTA genome file of spikein",
+                    "fa_icon": "far fa-file-code"
+                },
+                "spikein_gtf": {
+                    "type": "string",
+                    "format": "file-path",
+                    "mimetype": "text/plain",
+                    "pattern": "^\\S+\\.gtf(\\.gz)?$",
+                    "description": "Path to GTF annotation file of spikein",
+                    "fa_icon": "fas fa-code-branch"
+                },
                 "bowtie2_spikeref_index": {
+                    "type": "string",
+                    "format": "path",
+                    "fa_icon": "fas fa-bezier-curve",
+                    "description": "Path to directoryfor pre-built Bowtie2 index. for hybrid spikein - reference genome"
+                },
+                "star_spikeref_index": {
                     "type": "string",
                     "format": "path",
                     "fa_icon": "fas fa-bezier-curve",

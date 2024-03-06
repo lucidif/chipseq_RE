@@ -79,6 +79,7 @@ include { IGV                                 } from '../modules/local/igv'
 include { MULTIQC                             } from '../modules/local/multiqc'
 include { MULTIQC_CUSTOM_PHANTOMPEAKQUALTOOLS } from '../modules/local/multiqc_custom_phantompeakqualtools'
 include { MULTIQC_CUSTOM_PEAKS                } from '../modules/local/multiqc_custom_peaks'
+include { ALIGN_STAR                          } from '../subworkflows/nf-core/align_star'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -127,7 +128,7 @@ include { FASTQC_TRIMGALORE      } from '../subworkflows/nf-core/fastqc_trimgalo
 include { ALIGN_BWA_MEM          } from '../subworkflows/nf-core/align_bwa_mem'
 //include { ALIGN_BOWTIE2          } from '../subworkflows/nf-core/align_bowtie2'
 include { ALIGN_CHROMAP          } from '../subworkflows/nf-core/align_chromap'
-include { ALIGN_STAR             } from '../subworkflows/nf-core/align_star'
+//include { ALIGN_STAR             } from '../subworkflows/nf-core/align_star'
 include { MARK_DUPLICATES_PICARD } from '../subworkflows/nf-core/mark_duplicates_picard'
 
 /*
@@ -272,10 +273,15 @@ workflow CHIPSEQ {
     // SUBWORKFLOW: Alignment with STAR & BAM QC
     //
     if (params.aligner == 'star') {
+        // ALIGN_STAR (
+        //     FASTQC_TRIMGALORE.out.reads,
+        //     PREPARE_GENOME.out.star_index
+        // )
         ALIGN_STAR (
             FASTQC_TRIMGALORE.out.reads,
-            PREPARE_GENOME.out.star_index
+            PREPARE_GENOME.out.star_spikein_ref_index
         )
+
         ch_genome_bam        = ALIGN_STAR.out.bam
         ch_genome_bam_index  = ALIGN_STAR.out.bai
         ch_transcriptome_bam = ALIGN_STAR.out.bam_transcript
@@ -283,6 +289,7 @@ workflow CHIPSEQ {
         ch_samtools_flagstat = ALIGN_STAR.out.flagstat
         ch_samtools_idxstats = ALIGN_STAR.out.idxstats
         ch_star_multiqc      = ALIGN_STAR.out.log_final
+        //= ALIGN_STAR.out.star_spikein_ref_index
 
         ch_versions = ch_versions.mix(ALIGN_STAR.out.versions)
     }
