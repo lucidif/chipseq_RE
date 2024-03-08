@@ -238,7 +238,7 @@ workflow PREPARE_GENOME {
     fasta         = ch_fasta                  //    path: genome.fasta
     gtf           = ch_gtf                    //    path: genome.gtf
     spikein_fasta = ch_fasta_spikein
-    spikein_gtf   - ch_gtf_spikein
+    spikein_gtf   = ch_gtf_spikein
     gene_bed      = ch_gene_bed               //    path: gene.bed
     chrom_sizes   = ch_chrom_sizes            //    path: genome.sizes
     filtered_bed  = ch_genome_filtered_bed    //    path: *.include_regions.bed

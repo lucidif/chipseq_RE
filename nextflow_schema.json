@@ -206,6 +206,11 @@
                     "format": "path",
                     "fa_icon": "fas fa-bezier-curve",
                     "description": "Path to directoryfor pre-built Bowtie2 index. for hybrid spikein - reference genome"
+                },
+                "star_genomeChrBinNbits": {
+                    "type": "number",
+                    "description": "limit ammount of ram for hybrid indices",
+                    "fa_icon": "fas fa-arrows-alt-h"
                 }
             }
         },

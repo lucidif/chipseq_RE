@@ -22,10 +22,10 @@ process SAMTOOLS_SPLITSPECIES {
 
 
     output:
-    tuple val(meta), path("*_${ref_name}.bam"), path("*_${ref_name}.bam.bai") ,  emit: refbambai
-    tuple val(meta), path("*_${spikein_name}.bam"), path("*_${spikein_name}.bam.bai") ,  emit: spikebambai
+    tuple val(meta), path("*_${ref_name}_sorted.bam"), path("*_${ref_name}_sorted.bam.bai") ,  emit: refbambai
+    tuple val(meta), path("*_${spikein_name}_sorted.bam"), path("*_${spikein_name}_sorted.bam.bai") ,  emit: spikebambai
     //tuple val(meta), path("*_${ref_name}.bam"), path("*_${spikein_name}.bam") ,  emit: allbam
-    tuple val(meta), path("*_${ref_name}.bam") ,  emit: refbam
+    tuple val(meta), path("*_${ref_name}_sorted.bam") ,  emit: refbam
     //tuple val(meta), path("*_${ref_name}.bam.bai"), path("*_${spikein_name}.bam.bai"), emit : bai
     //tuple val(meta), path("*_${ref_name}.bam"), path("*_${ref_name}.bam.bai"), emit: refpath
     //tuple val(meta), path("*_${spikein_name}.bam"), path("*_${spikein_name}.bam.bai"), emit: spikepath
@@ -62,8 +62,14 @@ process SAMTOOLS_SPLITSPECIES {
         -h \\
         ${input} | grep -v ${ref_name} | sed s/${spikein_name}\\_chr/chr/g | samtools view -bhS - > ${meta.id}_${spikein_name}.bam 
 
-    samtools index ${meta.id}_${ref_name}.bam ${meta.id}_${ref_name}.bam.bai
-    samtools index ${meta.id}_${spikein_name}.bam ${meta.id}_${spikein_name}.bam.bai
+    samtools sort ${meta.id}_${ref_name}.bam -o ${meta.id}_${ref_name}_sorted.bam
+    samtools sort ${meta.id}_${spikein_name}.bam -o ${meta.id}_${spikein_name}_sorted.bam
+
+    rm ${meta.id}_${ref_name}.bam
+    rm ${meta.id}_${spikein_name}.bam
+
+    samtools index ${meta.id}_${ref_name}_sorted.bam ${meta.id}_${ref_name}_sorted.bam.bai
+    samtools index ${meta.id}_${spikein_name}_sorted.bam ${meta.id}_${spikein_name}_sorted.bam.bai
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

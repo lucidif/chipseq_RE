@@ -79,7 +79,6 @@ include { IGV                                 } from '../modules/local/igv'
 include { MULTIQC                             } from '../modules/local/multiqc'
 include { MULTIQC_CUSTOM_PHANTOMPEAKQUALTOOLS } from '../modules/local/multiqc_custom_phantompeakqualtools'
 include { MULTIQC_CUSTOM_PEAKS                } from '../modules/local/multiqc_custom_peaks'
-include { ALIGN_STAR                          } from '../subworkflows/nf-core/align_star'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -88,6 +87,7 @@ include { INPUT_CHECK         } from '../subworkflows/local/input_check'
 include { PREPARE_GENOME      } from '../subworkflows/local/prepare_genome'
 include { FILTER_BAM_BAMTOOLS } from '../subworkflows/local/filter_bam_bamtools'
 include { ALIGN_BOWTIE2          } from '../subworkflows/local/align_bowtie2'
+include { ALIGN_STAR                          } from '../subworkflows/local/align_star'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -328,7 +328,17 @@ workflow CHIPSEQ {
     //
     // SUBWORKFLOW: Filter BAM file with BamTools
     //
-    FILTER_BAM_BAMTOOLS (
+
+    //
+    // FILTER DISABLE
+    //
+    if(params.filters_disable){
+        ch_bam_to_analyze = MARK_DUPLICATES_PICARD.out.bam
+        ch_flagstats_to_analyze = MARK_DUPLICATES_PICARD.out.flagstat
+        ch_stats_to_analyze = MARK_DUPLICATES_PICARD.out.stats
+        ch_idxstats_to_analyze = MARK_DUPLICATES_PICARD.out.idxstats
+    }else{
+        FILTER_BAM_BAMTOOLS (
         MARK_DUPLICATES_PICARD.out.bam.join(MARK_DUPLICATES_PICARD.out.bai, by: [0]),
         PREPARE_GENOME.out.filtered_bed.first(),
         ch_bamtools_filter_se_config,
@@ -340,14 +350,6 @@ workflow CHIPSEQ {
     ch_flagstats_to_analyze = FILTER_BAM_BAMTOOLS.out.flagstat
     ch_stats_to_analyze = FILTER_BAM_BAMTOOLS.out.stats
     ch_idxstats_to_analyze = FILTER_BAM_BAMTOOLS.out.idxstats
-    //
-    // FILTER DISABLE
-    //
-    if(params.filters_disable){
-        ch_bam_to_analyze = MARK_DUPLICATES_PICARD.out.bam
-        ch_flagstats_to_analyze = MARK_DUPLICATES_PICARD.out.flagstat
-        ch_stats_to_analyze = MARK_DUPLICATES_PICARD.out.stats
-        ch_idxstats_to_analyze = MARK_DUPLICATES_PICARD.out.idxstats
     }
 
 
@@ -468,11 +470,20 @@ workflow CHIPSEQ {
     //
     // Create channels: [ meta, [ ip_bam, control_bam ] [ ip_bai, control_bai ] ]
     //
-    FILTER_BAM_BAMTOOLS
+
+    if(params.filters_disable){        
+        MARK_DUPLICATES_PICARD
+        .out
+        .bam
+        .join(MARK_DUPLICATES_PICARD.out.bai, by: [0])
+        .set { ch_genome_bam_bai }
+    }else{
+        FILTER_BAM_BAMTOOLS
         .out
         .bam
         .join(FILTER_BAM_BAMTOOLS.out.bai, by: [0])
         .set { ch_genome_bam_bai }
+    }
     
     ch_genome_bam_bai
         .combine(ch_genome_bam_bai)
