@@ -4,6 +4,11 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Modify fasta channel to include meta data
+if (params.fasta) { ch_fasta =  Channel.fromPath(params.fasta) } else { exit 1, 'Fasta reference genome not specified!' }
+ch_fasta_meta = ch_fasta.map{ it -> [[id:it[0].baseName], it] }.collect()
+//ch_fasta_meta.view()
+
 def valid_params = [
     aligners       : [ 'bwa', 'bowtie2', 'chromap', 'star' ]
 ]
@@ -82,6 +87,7 @@ include { INPUT_CHECK         } from '../subworkflows/local/input_check'
 include { PREPARE_GENOME      } from '../subworkflows/local/prepare_genome'
 include { FILTER_BAM_BAMTOOLS } from '../subworkflows/local/filter_bam_bamtools'
 include { ALIGN_BOWTIE2          } from '../subworkflows/local/align_bowtie2'
+include { ALIGN_STAR                          } from '../subworkflows/local/align_star'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,6 +104,7 @@ include { PICARD_COLLECTMULTIPLEMETRICS } from '../modules/nf-core/modules/picar
 include { PRESEQ_LCEXTRAP               } from '../modules/nf-core/modules/preseq/lcextrap/main'
 include { PHANTOMPEAKQUALTOOLS          } from '../modules/nf-core/modules/phantompeakqualtools/main'
 include { UCSC_BEDGRAPHTOBIGWIG         } from '../modules/nf-core/modules/ucsc/bedgraphtobigwig/main'
+include { UCSC_BEDGRAPHTOBIGWIG  as RAW_UCSC_BEDGRAPHTOBIGWIG } from '../modules/nf-core/modules/ucsc/bedgraphtobigwig/main'
 include { DEEPTOOLS_COMPUTEMATRIX       } from '../modules/nf-core/modules/deeptools/computematrix/main'
 include { DEEPTOOLS_PLOTPROFILE         } from '../modules/nf-core/modules/deeptools/plotprofile/main'
 include { DEEPTOOLS_PLOTHEATMAP         } from '../modules/nf-core/modules/deeptools/plotheatmap/main'
@@ -106,6 +113,9 @@ include { KHMER_UNIQUEKMERS             } from '../modules/nf-core/modules/khmer
 include { MACS2_CALLPEAK                } from '../modules/nf-core/modules/macs2/callpeak/main'
 include { SUBREAD_FEATURECOUNTS         } from '../modules/nf-core/modules/subread/featurecounts/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
+include { SAMTOOLS_FAIDX                } from '../modules/nf-core/modules/samtools/faidx/main'
+include { SAMTOOLS_INDEX                } from '../modules/nf-core/modules/samtools/index/main'
+include { DEEPTOOLS_BAMCOVERAGE         } from '../modules/nf-core/modules/deeptools/bamcoverage/main'
 
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_MACS2     } from '../modules/nf-core/modules/homer/annotatepeaks/main'
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_CONSENSUS } from '../modules/nf-core/modules/homer/annotatepeaks/main'
@@ -118,7 +128,7 @@ include { FASTQC_TRIMGALORE      } from '../subworkflows/nf-core/fastqc_trimgalo
 include { ALIGN_BWA_MEM          } from '../subworkflows/nf-core/align_bwa_mem'
 //include { ALIGN_BOWTIE2          } from '../subworkflows/nf-core/align_bowtie2'
 include { ALIGN_CHROMAP          } from '../subworkflows/nf-core/align_chromap'
-include { ALIGN_STAR             } from '../subworkflows/nf-core/align_star'
+//include { ALIGN_STAR             } from '../subworkflows/nf-core/align_star'
 include { MARK_DUPLICATES_PICARD } from '../subworkflows/nf-core/mark_duplicates_picard'
 
 /*
@@ -133,6 +143,16 @@ def multiqc_report = []
 workflow CHIPSEQ {
 
     ch_versions = Channel.empty()
+
+    SAMTOOLS_FAIDX (
+            ch_fasta_meta,
+            [[], []]
+        )
+
+    //ch_fasta_meta.set{faidx_path}
+    //ch_fasta_meta.view()
+    SAMTOOLS_FAIDX.out.fai.map{meta,path -> [path]}.set{faidx_path}
+
 
     //
     // SUBWORKFLOW: Uncompress and prepare reference genome files
@@ -253,10 +273,15 @@ workflow CHIPSEQ {
     // SUBWORKFLOW: Alignment with STAR & BAM QC
     //
     if (params.aligner == 'star') {
+        // ALIGN_STAR (
+        //     FASTQC_TRIMGALORE.out.reads,
+        //     PREPARE_GENOME.out.star_index
+        // )
         ALIGN_STAR (
             FASTQC_TRIMGALORE.out.reads,
-            PREPARE_GENOME.out.star_index
+            PREPARE_GENOME.out.star_spikein_ref_index
         )
+
         ch_genome_bam        = ALIGN_STAR.out.bam
         ch_genome_bam_index  = ALIGN_STAR.out.bai
         ch_transcriptome_bam = ALIGN_STAR.out.bam_transcript
@@ -264,6 +289,7 @@ workflow CHIPSEQ {
         ch_samtools_flagstat = ALIGN_STAR.out.flagstat
         ch_samtools_idxstats = ALIGN_STAR.out.idxstats
         ch_star_multiqc      = ALIGN_STAR.out.log_final
+        //= ALIGN_STAR.out.star_spikein_ref_index
 
         ch_versions = ch_versions.mix(ALIGN_STAR.out.versions)
     }
@@ -302,13 +328,30 @@ workflow CHIPSEQ {
     //
     // SUBWORKFLOW: Filter BAM file with BamTools
     //
-    FILTER_BAM_BAMTOOLS (
+
+    //
+    // FILTER DISABLE
+    //
+    if(params.filters_disable){
+        ch_bam_to_analyze = MARK_DUPLICATES_PICARD.out.bam
+        ch_flagstats_to_analyze = MARK_DUPLICATES_PICARD.out.flagstat
+        ch_stats_to_analyze = MARK_DUPLICATES_PICARD.out.stats
+        ch_idxstats_to_analyze = MARK_DUPLICATES_PICARD.out.idxstats
+    }else{
+        FILTER_BAM_BAMTOOLS (
         MARK_DUPLICATES_PICARD.out.bam.join(MARK_DUPLICATES_PICARD.out.bai, by: [0]),
         PREPARE_GENOME.out.filtered_bed.first(),
         ch_bamtools_filter_se_config,
         ch_bamtools_filter_pe_config
     )
+
     ch_versions = ch_versions.mix(FILTER_BAM_BAMTOOLS.out.versions.first().ifEmpty(null))
+    ch_bam_to_analyze = FILTER_BAM_BAMTOOLS.out.bam
+    ch_flagstats_to_analyze = FILTER_BAM_BAMTOOLS.out.flagstat
+    ch_stats_to_analyze = FILTER_BAM_BAMTOOLS.out.stats
+    ch_idxstats_to_analyze = FILTER_BAM_BAMTOOLS.out.idxstats
+    }
+
 
     //
     // MODULE: Preseq coverage analysis
@@ -328,7 +371,7 @@ workflow CHIPSEQ {
     ch_picardcollectmultiplemetrics_multiqc = Channel.empty()
     if (!params.skip_picard_metrics) {
         PICARD_COLLECTMULTIPLEMETRICS (
-            FILTER_BAM_BAMTOOLS.out.bam,
+            ch_bam_to_analyze,
             PREPARE_GENOME.out.fasta,
             []
         )
@@ -340,7 +383,7 @@ workflow CHIPSEQ {
     // MODULE: Phantompeaktools strand cross-correlation and QC metrics
     //
     PHANTOMPEAKQUALTOOLS (
-        FILTER_BAM_BAMTOOLS.out.bam
+        ch_bam_to_analyze
     )
     ch_versions = ch_versions.mix(PHANTOMPEAKQUALTOOLS.out.versions.first())
 
@@ -355,10 +398,28 @@ workflow CHIPSEQ {
     )
 
     //
+    // MODULE: deeptools bigwig
+    //
+
+    //ch_bam_to_analyze
+    //ch_bam_to_analyze.view()
+
+    SAMTOOLS_INDEX(ch_bam_to_analyze)
+
+    ch_deepcov=ch_bam_to_analyze.join(SAMTOOLS_INDEX.out.bai, by: [0])
+
+    DEEPTOOLS_BAMCOVERAGE (
+        ch_deepcov,
+        params.fasta,
+        faidx_path
+    )
+
+
+    //
     // MODULE: BedGraph coverage tracks
     //
     BEDTOOLS_GENOMECOV (
-        FILTER_BAM_BAMTOOLS.out.bam.join(FILTER_BAM_BAMTOOLS.out.flagstat, by: [0])
+        ch_bam_to_analyze.join(ch_flagstats_to_analyze, by: [0])
     )
     ch_versions = ch_versions.mix(BEDTOOLS_GENOMECOV.out.versions.first())
 
@@ -369,6 +430,12 @@ workflow CHIPSEQ {
         BEDTOOLS_GENOMECOV.out.bedgraph,
         PREPARE_GENOME.out.chrom_sizes
     )
+
+    RAW_UCSC_BEDGRAPHTOBIGWIG (
+        BEDTOOLS_GENOMECOV.out.rawbedgraph,
+        PREPARE_GENOME.out.chrom_sizes
+    )
+
     ch_versions = ch_versions.mix(UCSC_BEDGRAPHTOBIGWIG.out.versions.first())
 
     ch_deeptoolsplotprofile_multiqc = Channel.empty()
@@ -403,11 +470,20 @@ workflow CHIPSEQ {
     //
     // Create channels: [ meta, [ ip_bam, control_bam ] [ ip_bai, control_bai ] ]
     //
-    FILTER_BAM_BAMTOOLS
+
+    if(params.filters_disable){        
+        MARK_DUPLICATES_PICARD
+        .out
+        .bam
+        .join(MARK_DUPLICATES_PICARD.out.bai, by: [0])
+        .set { ch_genome_bam_bai }
+    }else{
+        FILTER_BAM_BAMTOOLS
         .out
         .bam
         .join(FILTER_BAM_BAMTOOLS.out.bai, by: [0])
         .set { ch_genome_bam_bai }
+    }
     
     ch_genome_bam_bai
         .combine(ch_genome_bam_bai)
@@ -702,9 +778,9 @@ workflow CHIPSEQ {
             MARK_DUPLICATES_PICARD.out.idxstats.collect{it[1]}.ifEmpty([]),
             MARK_DUPLICATES_PICARD.out.metrics.collect{it[1]}.ifEmpty([]),
 
-            FILTER_BAM_BAMTOOLS.out.stats.collect{it[1]}.ifEmpty([]),
-            FILTER_BAM_BAMTOOLS.out.flagstat.collect{it[1]}.ifEmpty([]),
-            FILTER_BAM_BAMTOOLS.out.idxstats.collect{it[1]}.ifEmpty([]),
+            ch_stats_to_analyze.collect{it[1]}.ifEmpty([]),
+            ch_flagstats_to_analyze.collect{it[1]}.ifEmpty([]),
+            ch_idxstats_to_analyze.collect{it[1]}.ifEmpty([]),
             ch_picardcollectmultiplemetrics_multiqc.collect{it[1]}.ifEmpty([]),
 
             ch_preseq_multiqc.collect{it[1]}.ifEmpty([]),

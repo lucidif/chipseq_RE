@@ -19,14 +19,15 @@ process STAR_GENOMEGENERATE {
     script:
     def args   = (task.ext.args ?: '').tokenize()
     def memory = task.memory ? "--limitGenomeGenerateRAM ${task.memory.toBytes() - 100000000}" : ''
+    
     if (args.contains('--genomeSAindexNbases')) {
+
         """
         mkdir star
         STAR \\
             --runMode genomeGenerate \\
             --genomeDir star/ \\
             --genomeFastaFiles $fasta \\
-            --sjdbGTFfile $gtf \\
             --runThreadN $task.cpus \\
             $memory \\
             ${args.join(' ')}
@@ -44,7 +45,6 @@ process STAR_GENOMEGENERATE {
             --runMode genomeGenerate \\
             --genomeDir star/ \\
             --genomeFastaFiles $fasta \\
-            --sjdbGTFfile $gtf \\
             --runThreadN $task.cpus \\
             --genomeSAindexNbases \$NUM_BASES \\
             $memory \\

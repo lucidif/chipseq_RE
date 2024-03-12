@@ -11,7 +11,8 @@ process BEDTOOLS_GENOMECOV {
     tuple val(meta), path(bam), path(flagstat)
 
     output:
-    tuple val(meta), path("*.bedGraph"), emit: bedgraph
+    tuple val(meta), path("*_scaled.bedGraph"), emit: bedgraph
+    tuple val(meta), path("*_notscaled.bedGraph"), emit: rawbedgraph
     tuple val(meta), path("*.txt")     , emit: scale_factor
     path "versions.yml"                , emit: versions
 
@@ -28,10 +29,18 @@ process BEDTOOLS_GENOMECOV {
         genomecov \\
         -ibam $bam \\
         -bg \\
+        $pe \\
+        $extend \\
+        | sort -T '.' -k1,1 -k2,2n > ${prefix}_notscaled.bedGraph
+
+    bedtools \\
+        genomecov \\
+        -ibam $bam \\
+        -bg \\
         -scale \$SCALE_FACTOR \\
         $pe \\
         $extend \\
-        | sort -T '.' -k1,1 -k2,2n > ${prefix}.bedGraph
+        | sort -T '.' -k1,1 -k2,2n > ${prefix}_scaled.bedGraph
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
