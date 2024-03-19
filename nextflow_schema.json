@@ -39,6 +39,11 @@
                     "fa_icon": "fas fa-chart-area",
                     "enum": [50, 75, 100, 150, 200]
                 },
+                "effectiveGenomeSize" : {
+                    "type": "integer",
+                    "description": "length of the 'mappable' genome",
+                    "fa_icon": "fas fa-chart-area"
+                }, 
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",

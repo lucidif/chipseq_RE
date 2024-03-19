@@ -105,6 +105,10 @@ include { KHMER_UNIQUEKMERS             } from '../modules/nf-core/modules/khmer
 include { MACS2_CALLPEAK                } from '../modules/nf-core/modules/macs2/callpeak/main'
 include { SUBREAD_FEATURECOUNTS         } from '../modules/nf-core/modules/subread/featurecounts/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
+include { SAMTOOLS_FAIDX                } from '../modules/nf-core/modules/samtools/faidx/main'
+include { SAMTOOLS_INDEX                } from '../modules/nf-core/modules/samtools/index/main'
+include { DEEPTOOLS_BAMCOVERAGE         } from '../modules/nf-core/modules/deeptools/bamcoverage/main'
+
 
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_MACS2     } from '../modules/nf-core/modules/homer/annotatepeaks/main'
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_CONSENSUS } from '../modules/nf-core/modules/homer/annotatepeaks/main'
@@ -132,6 +136,15 @@ def multiqc_report = []
 workflow CHIPSEQ {
 
     ch_versions = Channel.empty()
+
+    SAMTOOLS_FAIDX (
+            ch_fasta_meta,
+            [[], []]
+       )
+
+    //ch_fasta_meta.set{faidx_path}
+    //ch_fasta_meta.view()
+    SAMTOOLS_FAIDX.out.fai.map{meta,path -> [path]}.set{faidx_path}
 
     //
     // SUBWORKFLOW: Uncompress and prepare reference genome files
@@ -358,6 +371,24 @@ workflow CHIPSEQ {
         FILTER_BAM_BAMTOOLS.out.bam.join(FILTER_BAM_BAMTOOLS.out.flagstat, by: [0])
     )
     ch_versions = ch_versions.mix(BEDTOOLS_GENOMECOV.out.versions.first())
+
+    //
+    // MODULE: deeptools bigwig
+    //
+
+    //ch_bam_to_analyze
+    //ch_bam_to_analyze.view()
+
+    SAMTOOLS_INDEX(ch_bam_to_analyze)
+
+    ch_deepcov=ch_bam_to_analyze.join(SAMTOOLS_INDEX.out.bai, by: [0])
+
+    DEEPTOOLS_BAMCOVERAGE (
+        ch_deepcov,
+        params.fasta,
+        faidx_path
+    )
+    
 
     //
     // MODULE: BigWig coverage tracks
