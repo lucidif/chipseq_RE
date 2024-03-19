@@ -312,13 +312,25 @@ workflow CHIPSEQ {
     //
     // SUBWORKFLOW: Filter BAM file with BamTools
     //
-    FILTER_BAM_BAMTOOLS (
+    if(params.filters_disable){
+        ch_bam_to_analyze = MARK_DUPLICATES_PICARD.out.bam
+        ch_flagstats_to_analyze = MARK_DUPLICATES_PICARD.out.flagstat
+        ch_stats_to_analyze = MARK_DUPLICATES_PICARD.out.stats
+        ch_idxstats_to_analyze = MARK_DUPLICATES_PICARD.out.idxstats
+    }else{
+        FILTER_BAM_BAMTOOLS (
         MARK_DUPLICATES_PICARD.out.bam.join(MARK_DUPLICATES_PICARD.out.bai, by: [0]),
         PREPARE_GENOME.out.filtered_bed.first(),
         ch_bamtools_filter_se_config,
         ch_bamtools_filter_pe_config
     )
+
     ch_versions = ch_versions.mix(FILTER_BAM_BAMTOOLS.out.versions.first().ifEmpty(null))
+    ch_bam_to_analyze = FILTER_BAM_BAMTOOLS.out.bam
+    ch_flagstats_to_analyze = FILTER_BAM_BAMTOOLS.out.flagstat
+    ch_stats_to_analyze = FILTER_BAM_BAMTOOLS.out.stats
+    ch_idxstats_to_analyze = FILTER_BAM_BAMTOOLS.out.idxstats
+    }
 
     //
     // MODULE: Preseq coverage analysis
@@ -431,11 +443,19 @@ workflow CHIPSEQ {
     //
     // Create channels: [ meta, [ ip_bam, control_bam ] [ ip_bai, control_bai ] ]
     //
-    FILTER_BAM_BAMTOOLS
+    if(params.filters_disable){        
+        MARK_DUPLICATES_PICARD
+        .out
+        .bam
+        .join(MARK_DUPLICATES_PICARD.out.bai, by: [0])
+        .set { ch_genome_bam_bai }
+    }else{
+        FILTER_BAM_BAMTOOLS
         .out
         .bam
         .join(FILTER_BAM_BAMTOOLS.out.bai, by: [0])
         .set { ch_genome_bam_bai }
+    }
     
     ch_genome_bam_bai
         .combine(ch_genome_bam_bai)
