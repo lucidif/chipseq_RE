@@ -384,7 +384,7 @@ workflow CHIPSEQ {
     // MODULE: BedGraph coverage tracks
     //
     BEDTOOLS_GENOMECOV (
-        FILTER_BAM_BAMTOOLS.out.bam.join(FILTER_BAM_BAMTOOLS.out.flagstat, by: [0])
+        ch_bam_to_analyze.bam.join(ch_bam_to_analyze.flagstat, by: [0])
     )
     ch_versions = ch_versions.mix(BEDTOOLS_GENOMECOV.out.versions.first())
 
@@ -457,7 +457,7 @@ workflow CHIPSEQ {
         FILTER_BAM_BAMTOOLS
         .out
         .bam
-        .join(FILTER_BAM_BAMTOOLS.out.bai, by: [0])
+        .join(ch_bam_to_analyze.bai, by: [0])
         .set { ch_genome_bam_bai }
     }
 
@@ -754,9 +754,9 @@ workflow CHIPSEQ {
             MARK_DUPLICATES_PICARD.out.idxstats.collect{it[1]}.ifEmpty([]),
             MARK_DUPLICATES_PICARD.out.metrics.collect{it[1]}.ifEmpty([]),
 
-            FILTER_BAM_BAMTOOLS.out.stats.collect{it[1]}.ifEmpty([]),
-            FILTER_BAM_BAMTOOLS.out.flagstat.collect{it[1]}.ifEmpty([]),
-            FILTER_BAM_BAMTOOLS.out.idxstats.collect{it[1]}.ifEmpty([]),
+            ch_bam_to_analyze.stats.collect{it[1]}.ifEmpty([]),
+            ch_bam_to_analyze.flagstat.collect{it[1]}.ifEmpty([]),
+            ch_bam_to_analyze.idxstats.collect{it[1]}.ifEmpty([]),
             ch_picardcollectmultiplemetrics_multiqc.collect{it[1]}.ifEmpty([]),
 
             ch_preseq_multiqc.collect{it[1]}.ifEmpty([]),
