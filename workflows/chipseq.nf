@@ -384,7 +384,7 @@ workflow CHIPSEQ {
     // MODULE: BedGraph coverage tracks
     //
     BEDTOOLS_GENOMECOV (
-        ch_bam_to_analyze.bam.join(ch_bam_to_analyze.flagstat, by: [0])
+        ch_bam_to_analyze.join(ch_flagstats_to_analyze, by: [0])
     )
     ch_versions = ch_versions.mix(BEDTOOLS_GENOMECOV.out.versions.first())
 
