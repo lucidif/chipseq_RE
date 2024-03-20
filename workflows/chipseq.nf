@@ -754,9 +754,9 @@ workflow CHIPSEQ {
             MARK_DUPLICATES_PICARD.out.idxstats.collect{it[1]}.ifEmpty([]),
             MARK_DUPLICATES_PICARD.out.metrics.collect{it[1]}.ifEmpty([]),
 
-            ch_bam_to_analyze.stats.collect{it[1]}.ifEmpty([]),
-            ch_bam_to_analyze.flagstat.collect{it[1]}.ifEmpty([]),
-            ch_bam_to_analyze.idxstats.collect{it[1]}.ifEmpty([]),
+            ch_stats_to_analyze.collect{it[1]}.ifEmpty([]),
+            ch_flagstats_to_analyze.collect{it[1]}.ifEmpty([]),
+            ch_idxstats_to_analyze.collect{it[1]}.ifEmpty([]),
             ch_picardcollectmultiplemetrics_multiqc.collect{it[1]}.ifEmpty([]),
 
             ch_preseq_multiqc.collect{it[1]}.ifEmpty([]),
