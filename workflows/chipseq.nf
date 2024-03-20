@@ -354,7 +354,7 @@ workflow CHIPSEQ {
     ch_picardcollectmultiplemetrics_multiqc = Channel.empty()
     if (!params.skip_picard_metrics) {
         PICARD_COLLECTMULTIPLEMETRICS (
-            FILTER_BAM_BAMTOOLS.out.bam,
+            ch_bam_to_analyze,
             PREPARE_GENOME.out.fasta,
             []
         )
@@ -366,7 +366,7 @@ workflow CHIPSEQ {
     // MODULE: Phantompeaktools strand cross-correlation and QC metrics
     //
     PHANTOMPEAKQUALTOOLS (
-        FILTER_BAM_BAMTOOLS.out.bam
+        ch_bam_to_analyze
     )
     ch_versions = ch_versions.mix(PHANTOMPEAKQUALTOOLS.out.versions.first())
 
