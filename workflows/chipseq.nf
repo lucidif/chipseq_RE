@@ -4,6 +4,10 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Modify fasta channel to include meta data
+if (params.fasta) { ch_fasta =  Channel.fromPath(params.fasta) } else { exit 1, 'Fasta reference genome not specified!' }
+ch_fasta_meta = ch_fasta.map{ it -> [[id:it[0].baseName], it] }.collect()
+
 def valid_params = [
     aligners       : [ 'bwa', 'bowtie2', 'chromap', 'star' ]
 ]
@@ -456,7 +460,7 @@ workflow CHIPSEQ {
         .join(FILTER_BAM_BAMTOOLS.out.bai, by: [0])
         .set { ch_genome_bam_bai }
     }
-    
+
     ch_genome_bam_bai
         .combine(ch_genome_bam_bai)
         .map { 
