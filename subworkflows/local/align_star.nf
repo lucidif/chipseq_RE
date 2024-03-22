@@ -21,7 +21,7 @@ workflow ALIGN_STAR {
     STAR_ALIGN ( reads, index )
     ch_versions = ch_versions.mix(STAR_ALIGN.out.versions.first())
 
-    SAMTOOLS_SPLITSPECIES (
+    SAMTOOLS_SPLITSPECIES ( //TODO run this step only in is defined a spikein species
         STAR_ALIGN.out.bam,
         params.reference_genome,
         params.spikein_genome

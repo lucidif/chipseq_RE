@@ -219,7 +219,7 @@ workflow PREPARE_GENOME {
             ch_star_index = STAR_GENOMEGENERATE ( ch_fasta, ch_gtf ).index
             ch_versions   = ch_versions.mix(STAR_GENOMEGENERATE.out.versions)
         }
-        if (params.star_spikeref_index) {
+        if (params.star_spikeref_index) { //TODO add a control of param fasta is settend, if not setted not do this
             if (params.star_spikeref_index.endsWith('.tar.gz')) {
                 ch_star_hydrid_index = UNTAR_STAR_INDEX ( [ [:], params.star_spikeref_index ] ).untar.map{ it[1] }
                 ch_versions   = ch_versions.mix(UNTAR_STAR_INDEX.out.versions)

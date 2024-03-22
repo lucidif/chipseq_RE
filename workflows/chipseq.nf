@@ -157,6 +157,7 @@ workflow CHIPSEQ {
     //
     // SUBWORKFLOW: Uncompress and prepare reference genome files
     //
+    //TODO inside this add if condition, if there is only ref gtf, fasta and index map only on that reference
     PREPARE_GENOME (
         params.aligner
     )
@@ -277,6 +278,7 @@ workflow CHIPSEQ {
         //     FASTQC_TRIMGALORE.out.reads,
         //     PREPARE_GENOME.out.star_index
         // )
+        //TODO if spikein species not specified try alligment on ref 
         ALIGN_STAR (
             FASTQC_TRIMGALORE.out.reads,
             PREPARE_GENOME.out.star_spikein_ref_index
