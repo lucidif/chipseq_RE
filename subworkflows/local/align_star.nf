@@ -20,17 +20,22 @@ workflow ALIGN_STAR {
     //
     STAR_ALIGN ( reads, index )
     ch_versions = ch_versions.mix(STAR_ALIGN.out.versions.first())
-
-    SAMTOOLS_SPLITSPECIES ( //TODO run this step only in is defined a spikein species
-        STAR_ALIGN.out.bam,
-        params.reference_genome,
-        params.spikein_genome
+    if( params.spikein_genome ){
+        SAMTOOLS_SPLITSPECIES ( //TODO run this step only in is defined a spikein species
+            STAR_ALIGN.out.bam,
+            params.reference_genome,
+            params.spikein_genome
         )
+
+        ch_star_out = SAMTOOLS_SPLITSPECIES.out.refbam
+    } else {
+        ch_star_out = STAR_ALIGN.out.bam
+    }    
 
     //
     // Sort, index BAM file and run samtools stats, flagstat and idxstats
     //
-    BAM_SORT_SAMTOOLS ( SAMTOOLS_SPLITSPECIES.out.refbam )
+    BAM_SORT_SAMTOOLS ( ch_star_out )
     ch_versions = ch_versions.mix(BAM_SORT_SAMTOOLS.out.versions)
 
     emit:

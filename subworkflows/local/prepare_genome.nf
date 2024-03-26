@@ -48,30 +48,43 @@ workflow PREPARE_GENOME {
         ch_fasta = file(params.fasta)
     }
 
+    if( params.spikein_genome ){
     if (params.spikein_fasta.endsWith('.gz')) {
         ch_fasta_spikein  = GUNZIP_FASTA_SPIKEIN ( [ [:], params.spikein_fasta ] ).gunzip.map{ it[1] }
         ch_versions = ch_versions.mix(GUNZIP_FASTA_SPIKEIN.out.versions)
     } else {
         ch_fasta_spikein = file(params.spikein_fasta)
     }
+    }else{
+        ch_fasta_spikein = null
+    }
 
     // Make fasta file available if reference saved or IGV is run
     if (params.save_reference || !params.skip_igv) {
         file("${params.outdir}/genome/").mkdirs()
         ch_fasta.copyTo("${params.outdir}/genome/")
-        ch_fasta_spikein.copyTo("${params.outdir}/genome/")
+
+        if( params.spikein_genome ){
+            ch_fasta_spikein.copyTo("${params.outdir}/genome/")
+        }
+
+        
     }
 
     //
     // Uncompress GTF annotation file or create from GFF3 if required
     //
+    if( params.spikein_genome ){
     if (params.spikein_gtf.endsWith('.gz')) {
             ch_gtf_spikein  = GUNZIP_GTF_SPIKEIN ( [ [:], params.spikein_gtf ] ).gunzip.map{ it[1] }
             ch_versions = ch_versions.mix(GUNZIP_GTF_SPIKEIN.out.versions)
         } else {
             ch_gtf_spikein = file(params.spikein_gtf)
         }
-
+    }else{
+        ch_gtf_spikein = null
+    }
+    
     if (params.gtf) {
         if (params.gtf.endsWith('.gz')) {
             ch_gtf      = GUNZIP_GTF ( [ [:], params.gtf ] ).gunzip.map{ it[1] }
@@ -219,7 +232,9 @@ workflow PREPARE_GENOME {
             ch_star_index = STAR_GENOMEGENERATE ( ch_fasta, ch_gtf ).index
             ch_versions   = ch_versions.mix(STAR_GENOMEGENERATE.out.versions)
         }
-        if (params.star_spikeref_index) { //TODO add a control of param fasta is settend, if not setted not do this
+
+        if( params.spikein_genome ){
+        if ( params.star_spikeref_index  ) { //TODO add a control of param fasta is settend, if not setted not do this
             if (params.star_spikeref_index.endsWith('.tar.gz')) {
                 ch_star_hydrid_index = UNTAR_STAR_INDEX ( [ [:], params.star_spikeref_index ] ).untar.map{ it[1] }
                 ch_versions   = ch_versions.mix(UNTAR_STAR_INDEX.out.versions)
@@ -231,6 +246,11 @@ workflow PREPARE_GENOME {
             ch_star_hydrid_index = STAR_HYBRIDGENOMEGENERATE ( MERGE_SPIKEIN_REF.out.fasta, MERGE_SPIKEIN_REF.out.gtf ).index 
             ch_versions   = ch_versions.mix(STAR_GENOMEGENERATE.out.versions)
         }
+        }else{
+            ch_spikein_ref = null
+            ch_star_hydrid_index = null
+
+       }
         
     }
 

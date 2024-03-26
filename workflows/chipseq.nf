@@ -144,6 +144,7 @@ workflow CHIPSEQ {
 
     ch_versions = Channel.empty()
 
+
     SAMTOOLS_FAIDX (
             ch_fasta_meta,
             [[], []]
@@ -279,9 +280,17 @@ workflow CHIPSEQ {
         //     PREPARE_GENOME.out.star_index
         // )
         //TODO if spikein species not specified try alligment on ref 
+
+        if( params.spikein_genome ){
+            ch_star_idx=PREPARE_GENOME.out.star_spikein_ref_index
+        }else{
+            ch_star_idx=PREPARE_GENOME.out.star_index
+        }
+
+        
         ALIGN_STAR (
             FASTQC_TRIMGALORE.out.reads,
-            PREPARE_GENOME.out.star_spikein_ref_index
+            ch_star_idx
         )
 
         ch_genome_bam        = ALIGN_STAR.out.bam
