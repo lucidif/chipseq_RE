@@ -120,6 +120,8 @@ include { DEEPTOOLS_BAMCOVERAGE         } from '../modules/nf-core/modules/deept
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_MACS2     } from '../modules/nf-core/modules/homer/annotatepeaks/main'
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_CONSENSUS } from '../modules/nf-core/modules/homer/annotatepeaks/main'
 
+
+
 //
 // SUBWORKFLOW: Consisting entirely of nf-core/modules
 //
@@ -130,6 +132,7 @@ include { ALIGN_BWA_MEM          } from '../subworkflows/nf-core/align_bwa_mem'
 include { ALIGN_CHROMAP          } from '../subworkflows/nf-core/align_chromap'
 //include { ALIGN_STAR             } from '../subworkflows/nf-core/align_star'
 include { MARK_DUPLICATES_PICARD } from '../subworkflows/nf-core/mark_duplicates_picard'
+include { BAM_STATS_SAMTOOLS     } from '../subworkflows/nf-core/bam_stats_samtools'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -167,234 +170,247 @@ workflow CHIPSEQ {
     //
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
     //
-    INPUT_CHECK (
-        file(params.input),
-        params.seq_center
-    )
-    ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
+    // INPUT_CHECK (
+    //     file(params.input),
+    //     params.seq_center
+    // )
+    // ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
     //
     // SUBWORKFLOW: Read QC and trim adapters
     //
-    FASTQC_TRIMGALORE (
-        INPUT_CHECK.out.reads,
-        params.skip_fastqc || params.skip_qc,
-        params.skip_trimming
-    )
-    ch_versions = ch_versions.mix(FASTQC_TRIMGALORE.out.versions)
+    // FASTQC_TRIMGALORE (
+    //     INPUT_CHECK.out.reads,
+    //     params.skip_fastqc || params.skip_qc,
+    //     params.skip_trimming
+    // )
+    // ch_versions = ch_versions.mix(FASTQC_TRIMGALORE.out.versions)
 
     //
     // SUBWORKFLOW: Alignment with BWA & BAM QC
     //
-    ch_genome_bam        = Channel.empty()
-    ch_genome_bam_index  = Channel.empty()
-    ch_samtools_stats    = Channel.empty()
-    ch_samtools_flagstat = Channel.empty()
-    ch_samtools_idxstats = Channel.empty()
-    if (params.aligner == 'bwa') {
-        ALIGN_BWA_MEM (
-            FASTQC_TRIMGALORE.out.reads,
-            PREPARE_GENOME.out.bwa_index
-        )
-        ch_genome_bam        = ALIGN_BWA_MEM.out.bam
-        ch_genome_bam_index  = ALIGN_BWA_MEM.out.bai
-        ch_samtools_stats    = ALIGN_BWA_MEM.out.stats
-        ch_samtools_flagstat = ALIGN_BWA_MEM.out.flagstat
-        ch_samtools_idxstats = ALIGN_BWA_MEM.out.idxstats
-        ch_versions = ch_versions.mix(ALIGN_BWA_MEM.out.versions.first())
-    }
+    // ch_genome_bam        = Channel.empty()
+    // ch_genome_bam_index  = Channel.empty()
+    // ch_samtools_stats    = Channel.empty()
+    // ch_samtools_flagstat = Channel.empty()
+    // ch_samtools_idxstats = Channel.empty()
+    // if (params.aligner == 'bwa') {
+    //     ALIGN_BWA_MEM (
+    //         FASTQC_TRIMGALORE.out.reads,
+    //         PREPARE_GENOME.out.bwa_index
+    //     )
+    //     ch_genome_bam        = ALIGN_BWA_MEM.out.bam
+    //     ch_genome_bam_index  = ALIGN_BWA_MEM.out.bai
+    //     ch_samtools_stats    = ALIGN_BWA_MEM.out.stats
+    //     ch_samtools_flagstat = ALIGN_BWA_MEM.out.flagstat
+    //     ch_samtools_idxstats = ALIGN_BWA_MEM.out.idxstats
+    //     ch_versions = ch_versions.mix(ALIGN_BWA_MEM.out.versions.first())
+    // }
 
     //
     // SUBWORKFLOW: Alignment with Bowtie2 & BAM QC
     //
-    if (params.aligner == 'bowtie2') {
-        ch_bowtie2_index = [ [:], file(params.bowtie2_spikeref_index) ]
-        ALIGN_BOWTIE2 (
-            FASTQC_TRIMGALORE.out.reads,
-            //PREPARE_GENOME.out.bowtie2_index, //TODO ho messo direttamente l'index da parametro senza passare per prepare genome, va fatto meglio
-            ch_bowtie2_index,
-            params.save_unaligned
-        )
-        ch_genome_bam        = ALIGN_BOWTIE2.out.bam
-        ch_genome_bam_index  = ALIGN_BOWTIE2.out.bai
-        ch_samtools_stats    = ALIGN_BOWTIE2.out.stats
-        ch_samtools_flagstat = ALIGN_BOWTIE2.out.flagstat
-        ch_samtools_idxstats = ALIGN_BOWTIE2.out.idxstats
-        ch_versions = ch_versions.mix(ALIGN_BOWTIE2.out.versions.first())
-    }
+    // if (params.aligner == 'bowtie2') {
+    //     ch_bowtie2_index = [ [:], file(params.bowtie2_spikeref_index) ]
+    //     ALIGN_BOWTIE2 (
+    //         FASTQC_TRIMGALORE.out.reads,
+    //         //PREPARE_GENOME.out.bowtie2_index, //TODO ho messo direttamente l'index da parametro senza passare per prepare genome, va fatto meglio
+    //         ch_bowtie2_index,
+    //         params.save_unaligned
+    //     )
+    //     ch_genome_bam        = ALIGN_BOWTIE2.out.bam
+    //     ch_genome_bam_index  = ALIGN_BOWTIE2.out.bai
+    //     ch_samtools_stats    = ALIGN_BOWTIE2.out.stats
+    //     ch_samtools_flagstat = ALIGN_BOWTIE2.out.flagstat
+    //     ch_samtools_idxstats = ALIGN_BOWTIE2.out.idxstats
+    //     ch_versions = ch_versions.mix(ALIGN_BOWTIE2.out.versions.first())
+    // }
 
     //
     // SUBWORKFLOW: Alignment with Chromap & BAM QC
     //
-    if (params.aligner == 'chromap') {
-        ALIGN_CHROMAP (
-            FASTQC_TRIMGALORE.out.reads,
-            PREPARE_GENOME.out.chromap_index,
-            PREPARE_GENOME.out.fasta
-        )
+    // if (params.aligner == 'chromap') {
+    //     ALIGN_CHROMAP (
+    //         FASTQC_TRIMGALORE.out.reads,
+    //         PREPARE_GENOME.out.chromap_index,
+    //         PREPARE_GENOME.out.fasta
+    //     )
 
-        // Filter out paired-end reads until the issue below is fixed
-        // https://github.com/nf-core/chipseq/issues/291
-        // ch_genome_bam = ALIGN_CHROMAP.out.bam
-        ALIGN_CHROMAP
-            .out
-            .bam
-            .branch {
-                meta, bam ->
-                    single_end: meta.single_end
-                        return [ meta, bam ]
-                    paired_end: !meta.single_end
-                        return [ meta, bam ]
-            }
-            .set { ch_genome_bam_chromap }
+    //     // Filter out paired-end reads until the issue below is fixed
+    //     // https://github.com/nf-core/chipseq/issues/291
+    //     // ch_genome_bam = ALIGN_CHROMAP.out.bam
+    //     ALIGN_CHROMAP
+    //         .out
+    //         .bam
+    //         .branch {
+    //             meta, bam ->
+    //                 single_end: meta.single_end
+    //                     return [ meta, bam ]
+    //                 paired_end: !meta.single_end
+    //                     return [ meta, bam ]
+    //         }
+    //         .set { ch_genome_bam_chromap }
 
-        ch_genome_bam_chromap
-            .paired_end
-            .collect()
-            .map { 
-                it ->
-                    def count = it.size()
-                    if (count > 0) {
-                        log.warn "=============================================================================\n" +
-                        "  Paired-end files produced by chromap cannot be used by some downstream tools due to the issue below:\n" +
-                        "  https://github.com/nf-core/chipseq/issues/291\n" +
-                        "  They will be excluded from the analysis. Consider using a different aligner\n" +
-                        "==================================================================================="
-                    }
-            }
+    //     ch_genome_bam_chromap
+    //         .paired_end
+    //         .collect()
+    //         .map { 
+    //             it ->
+    //                 def count = it.size()
+    //                 if (count > 0) {
+    //                     log.warn "=============================================================================\n" +
+    //                     "  Paired-end files produced by chromap cannot be used by some downstream tools due to the issue below:\n" +
+    //                     "  https://github.com/nf-core/chipseq/issues/291\n" +
+    //                     "  They will be excluded from the analysis. Consider using a different aligner\n" +
+    //                     "==================================================================================="
+    //                 }
+    //         }
 
-        ch_genome_bam        = ch_genome_bam_chromap.single_end
-        ch_genome_bam_index  = ALIGN_CHROMAP.out.bai
-        ch_samtools_stats    = ALIGN_CHROMAP.out.stats
-        ch_samtools_flagstat = ALIGN_CHROMAP.out.flagstat
-        ch_samtools_idxstats = ALIGN_CHROMAP.out.idxstats
-        ch_versions = ch_versions.mix(ALIGN_CHROMAP.out.versions.first())
-    }
+    //     ch_genome_bam        = ch_genome_bam_chromap.single_end
+    //     ch_genome_bam_index  = ALIGN_CHROMAP.out.bai
+    //     ch_samtools_stats    = ALIGN_CHROMAP.out.stats
+    //     ch_samtools_flagstat = ALIGN_CHROMAP.out.flagstat
+    //     ch_samtools_idxstats = ALIGN_CHROMAP.out.idxstats
+    //     ch_versions = ch_versions.mix(ALIGN_CHROMAP.out.versions.first())
+    // }
 
     //
     // SUBWORKFLOW: Alignment with STAR & BAM QC
     //
-    if (params.aligner == 'star') {
-        // ALIGN_STAR (
-        //     FASTQC_TRIMGALORE.out.reads,
-        //     PREPARE_GENOME.out.star_index
-        // )
-        //TODO if spikein species not specified try alligment on ref 
+    // if (params.aligner == 'star') {
+    //     // ALIGN_STAR (
+    //     //     FASTQC_TRIMGALORE.out.reads,
+    //     //     PREPARE_GENOME.out.star_index
+    //     // )
+    //     //TODO if spikein species not specified try alligment on ref 
 
-        if( params.spikein_genome ){
-            ch_star_idx=PREPARE_GENOME.out.star_spikein_ref_index
-        }else{
-            ch_star_idx=PREPARE_GENOME.out.star_index
-        }
+    //     if( params.spikein_genome ){
+    //         ch_star_idx=PREPARE_GENOME.out.star_spikein_ref_index
+    //     }else{
+    //         ch_star_idx=PREPARE_GENOME.out.star_index
+    //     }
 
         
-        ALIGN_STAR (
-            FASTQC_TRIMGALORE.out.reads,
-            ch_star_idx
-        )
+    //     ALIGN_STAR (
+    //         FASTQC_TRIMGALORE.out.reads,
+    //         ch_star_idx
+    //     )
 
-        ch_genome_bam        = ALIGN_STAR.out.bam
-        ch_genome_bam_index  = ALIGN_STAR.out.bai
-        ch_transcriptome_bam = ALIGN_STAR.out.bam_transcript
-        ch_samtools_stats    = ALIGN_STAR.out.stats
-        ch_samtools_flagstat = ALIGN_STAR.out.flagstat
-        ch_samtools_idxstats = ALIGN_STAR.out.idxstats
-        ch_star_multiqc      = ALIGN_STAR.out.log_final
-        //= ALIGN_STAR.out.star_spikein_ref_index
+    //     ch_genome_bam        = ALIGN_STAR.out.bam
+    //     ch_genome_bam_index  = ALIGN_STAR.out.bai
+    //     ch_transcriptome_bam = ALIGN_STAR.out.bam_transcript
+    //     ch_samtools_stats    = ALIGN_STAR.out.stats
+    //     ch_samtools_flagstat = ALIGN_STAR.out.flagstat
+    //     ch_samtools_idxstats = ALIGN_STAR.out.idxstats
+    //     ch_star_multiqc      = ALIGN_STAR.out.log_final
+    //     //= ALIGN_STAR.out.star_spikein_ref_index
 
-        ch_versions = ch_versions.mix(ALIGN_STAR.out.versions)
-    }
+    //     ch_versions = ch_versions.mix(ALIGN_STAR.out.versions)
+    // }
 
     //
     // MODULE: Merge resequenced BAM files
     //
-    ch_genome_bam
-        .map {
-            meta, bam ->
-                def meta_clone = meta.clone()
-                meta_clone.remove('read_group')
-                meta_clone.id = meta_clone.id.split('_')[0..-2].join('_')
-                [ meta_clone, bam ] 
-        }
-        .groupTuple(by: [0])
-        .map { 
-            it ->
-                [ it[0], it[1].flatten() ] 
-        }
-        .set { ch_sort_bam }
+    // ch_genome_bam
+    //     .map {
+    //         meta, bam ->
+    //             def meta_clone = meta.clone()
+    //             meta_clone.remove('read_group')
+    //             meta_clone.id = meta_clone.id.split('_')[0..-2].join('_')
+    //             [ meta_clone, bam ] 
+    //     }
+    //     .groupTuple(by: [0])
+    //     .map { 
+    //         it ->
+    //             [ it[0], it[1].flatten() ] 
+    //     }
+    //     .set { ch_sort_bam }
 
-    PICARD_MERGESAMFILES (
-        ch_sort_bam
-    )
-    ch_versions = ch_versions.mix(PICARD_MERGESAMFILES.out.versions.first().ifEmpty(null))
+    // PICARD_MERGESAMFILES (
+    //     ch_sort_bam
+    // )
+    // ch_versions = ch_versions.mix(PICARD_MERGESAMFILES.out.versions.first().ifEmpty(null))
 
-    //
-    // SUBWORKFLOW: Mark duplicates & filter BAM files after merging
-    //
-    MARK_DUPLICATES_PICARD (
-        PICARD_MERGESAMFILES.out.bam
-    )
-    ch_versions = ch_versions.mix(MARK_DUPLICATES_PICARD.out.versions)
+    // //
+    // // SUBWORKFLOW: Mark duplicates & filter BAM files after merging
+    // //
+    // MARK_DUPLICATES_PICARD (
+    //     PICARD_MERGESAMFILES.out.bam
+    // )
+    // ch_versions = ch_versions.mix(MARK_DUPLICATES_PICARD.out.versions)
 
-    //
-    // SUBWORKFLOW: Filter BAM file with BamTools
-    //
+    // //
+    // // SUBWORKFLOW: Filter BAM file with BamTools
+    // //
 
-    //
-    // FILTER DISABLE
-    //
-    if(params.filters_disable){
-        ch_bam_to_analyze = MARK_DUPLICATES_PICARD.out.bam
-        ch_flagstats_to_analyze = MARK_DUPLICATES_PICARD.out.flagstat
-        ch_stats_to_analyze = MARK_DUPLICATES_PICARD.out.stats
-        ch_idxstats_to_analyze = MARK_DUPLICATES_PICARD.out.idxstats
-    }else{
-        FILTER_BAM_BAMTOOLS (
-        MARK_DUPLICATES_PICARD.out.bam.join(MARK_DUPLICATES_PICARD.out.bai, by: [0]),
-        PREPARE_GENOME.out.filtered_bed.first(),
-        ch_bamtools_filter_se_config,
-        ch_bamtools_filter_pe_config
-    )
+    // //
+    // // FILTER DISABLE
+    // //
+    // if(params.filters_disable){
+    //     ch_bam_to_analyze = MARK_DUPLICATES_PICARD.out.bam
+    //     ch_flagstats_to_analyze = MARK_DUPLICATES_PICARD.out.flagstat
+    //     ch_stats_to_analyze = MARK_DUPLICATES_PICARD.out.stats
+    //     ch_idxstats_to_analyze = MARK_DUPLICATES_PICARD.out.idxstats
+    // }else{
+    //     FILTER_BAM_BAMTOOLS (
+    //     MARK_DUPLICATES_PICARD.out.bam.join(MARK_DUPLICATES_PICARD.out.bai, by: [0]),
+    //     PREPARE_GENOME.out.filtered_bed.first(),
+    //     ch_bamtools_filter_se_config,
+    //     ch_bamtools_filter_pe_config
+    // )
 
-    ch_versions = ch_versions.mix(FILTER_BAM_BAMTOOLS.out.versions.first().ifEmpty(null))
-    ch_bam_to_analyze = FILTER_BAM_BAMTOOLS.out.bam
-    ch_flagstats_to_analyze = FILTER_BAM_BAMTOOLS.out.flagstat
-    ch_stats_to_analyze = FILTER_BAM_BAMTOOLS.out.stats
-    ch_idxstats_to_analyze = FILTER_BAM_BAMTOOLS.out.idxstats
-    }
+    // ch_versions = ch_versions.mix(FILTER_BAM_BAMTOOLS.out.versions.first().ifEmpty(null))
+    // ch_bam_to_analyze = FILTER_BAM_BAMTOOLS.out.bam
+    //ch_flagstats_to_analyze = FILTER_BAM_BAMTOOLS.out.flagstat
+    // ch_stats_to_analyze = FILTER_BAM_BAMTOOLS.out.stats
+    // ch_idxstats_to_analyze = FILTER_BAM_BAMTOOLS.out.idxstats
+    // }
 
 
     //
     // MODULE: Preseq coverage analysis
     //
-    ch_preseq_multiqc = Channel.empty()
-    if (!params.skip_preseq) {
-        PRESEQ_LCEXTRAP (
-            MARK_DUPLICATES_PICARD.out.bam
-        )
-        ch_preseq_multiqc = PRESEQ_LCEXTRAP.out.lc_extrap
-        ch_versions = ch_versions.mix(PRESEQ_LCEXTRAP.out.versions.first())
-    }
+    // ch_preseq_multiqc = Channel.empty()
+    // if (!params.skip_preseq) {
+    //     PRESEQ_LCEXTRAP (
+    //         MARK_DUPLICATES_PICARD.out.bam
+    //     )
+    //     ch_preseq_multiqc = PRESEQ_LCEXTRAP.out.lc_extrap
+    //     ch_versions = ch_versions.mix(PRESEQ_LCEXTRAP.out.versions.first())
+    // }
 
     //
     // MODULE: Picard post alignment QC
     //
-    ch_picardcollectmultiplemetrics_multiqc = Channel.empty()
-    if (!params.skip_picard_metrics) {
-        PICARD_COLLECTMULTIPLEMETRICS (
-            ch_bam_to_analyze,
-            PREPARE_GENOME.out.fasta,
-            []
-        )
-        ch_picardcollectmultiplemetrics_multiqc = PICARD_COLLECTMULTIPLEMETRICS.out.metrics
-        ch_versions = ch_versions.mix(PICARD_COLLECTMULTIPLEMETRICS.out.versions.first())
+    // ch_picardcollectmultiplemetrics_multiqc = Channel.empty()
+    // if (!params.skip_picard_metrics) {
+    //     PICARD_COLLECTMULTIPLEMETRICS (
+    //         ch_bam_to_analyze,
+    //         PREPARE_GENOME.out.fasta,
+    //         []
+    //     )
+    //     ch_picardcollectmultiplemetrics_multiqc = PICARD_COLLECTMULTIPLEMETRICS.out.metrics
+    //     ch_versions = ch_versions.mix(PICARD_COLLECTMULTIPLEMETRICS.out.versions.first())
+    // }
+
+
+    //
+    // new starting point
+    //
+    ch_bamfiles=channel.fromPath(params.input)
+        | splitCsv (header: true)
+        | map { row -> 
+            ssinfo = row.subMap ('sample', 'single_end','antibody','control','bam')
+            [[id:ssinfo.id, single_end:ssinfo.single_end, condition:ssinfo.condition, details:ssinfo.details, analysis:ssinfo.analysis], ssinfo.bam]
     }
+
+    //ch_bamfiles.view()
 
     //
     // MODULE: Phantompeaktools strand cross-correlation and QC metrics
     //
     PHANTOMPEAKQUALTOOLS (
-        ch_bam_to_analyze
+        ch_bamfiles
     )
     ch_versions = ch_versions.mix(PHANTOMPEAKQUALTOOLS.out.versions.first())
 
@@ -415,9 +431,12 @@ workflow CHIPSEQ {
     //ch_bam_to_analyze
     //ch_bam_to_analyze.view()
 
-    SAMTOOLS_INDEX(ch_bam_to_analyze)
+    SAMTOOLS_INDEX(ch_bamfiles)
 
-    ch_deepcov=ch_bam_to_analyze.join(SAMTOOLS_INDEX.out.bai, by: [0])
+    ch_deepcov=ch_bamfiles.join(SAMTOOLS_INDEX.out.bai, by: [0])
+
+    BAM_STATS_SAMTOOLS(ch_deepcov)
+    ch_flagstats_to_analyze=BAM_STATS_SAMTOOLS.out.flagstat
 
     DEEPTOOLS_BAMCOVERAGE (
         ch_deepcov,
@@ -430,7 +449,7 @@ workflow CHIPSEQ {
     // MODULE: BedGraph coverage tracks
     //
     BEDTOOLS_GENOMECOV (
-        ch_bam_to_analyze.join(ch_flagstats_to_analyze, by: [0])
+        ch_bamfiles.join(ch_flagstats_to_analyze, by: [0])
     )
     ch_versions = ch_versions.mix(BEDTOOLS_GENOMECOV.out.versions.first())
 
@@ -482,22 +501,22 @@ workflow CHIPSEQ {
     // Create channels: [ meta, [ ip_bam, control_bam ] [ ip_bai, control_bai ] ]
     //
 
-    if(params.filters_disable){        
-        MARK_DUPLICATES_PICARD
-        .out
-        .bam
-        .join(MARK_DUPLICATES_PICARD.out.bai, by: [0])
-        .set { ch_genome_bam_bai }
-    }else{
-        FILTER_BAM_BAMTOOLS
-        .out
-        .bam
-        .join(FILTER_BAM_BAMTOOLS.out.bai, by: [0])
-        .set { ch_genome_bam_bai }
-    }
+    // if(params.filters_disable){        
+    //     MARK_DUPLICATES_PICARD
+    //     .out
+    //     .bam
+    //     .join(MARK_DUPLICATES_PICARD.out.bai, by: [0])
+    //     .set { ch_genome_bam_bai }
+    // }else{
+    //     FILTER_BAM_BAMTOOLS
+    //     .out
+    //     .bam
+    //     .join(FILTER_BAM_BAMTOOLS.out.bai, by: [0])
+    //     .set { ch_genome_bam_bai }
+    // }
     
-    ch_genome_bam_bai
-        .combine(ch_genome_bam_bai)
+    ch_deepcov
+        .combine(ch_deepcov)
         .map { 
             meta1, bam1, bai1, meta2, bam2, bai2 ->
                 meta1.control == meta2.id ? [ meta1, [ bam1, bam2 ], [ bai1, bai2 ] ] : null
@@ -776,26 +795,36 @@ workflow CHIPSEQ {
             CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect(),
             ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'),
 
-            FASTQC_TRIMGALORE.out.fastqc_zip.collect{it[1]}.ifEmpty([]),
-            FASTQC_TRIMGALORE.out.trim_zip.collect{it[1]}.ifEmpty([]),
-            FASTQC_TRIMGALORE.out.trim_log.collect{it[1]}.ifEmpty([]),
-
-            ch_samtools_stats.collect{it[1]}.ifEmpty([]),
-            ch_samtools_flagstat.collect{it[1]}.ifEmpty([]),
-            ch_samtools_idxstats.collect{it[1]}.ifEmpty([]),
-
-            MARK_DUPLICATES_PICARD.out.stats.collect{it[1]}.ifEmpty([]),
-            MARK_DUPLICATES_PICARD.out.flagstat.collect{it[1]}.ifEmpty([]),
-            MARK_DUPLICATES_PICARD.out.idxstats.collect{it[1]}.ifEmpty([]),
-            MARK_DUPLICATES_PICARD.out.metrics.collect{it[1]}.ifEmpty([]),
-
-            ch_stats_to_analyze.collect{it[1]}.ifEmpty([]),
-            ch_flagstats_to_analyze.collect{it[1]}.ifEmpty([]),
-            ch_idxstats_to_analyze.collect{it[1]}.ifEmpty([]),
-            ch_picardcollectmultiplemetrics_multiqc.collect{it[1]}.ifEmpty([]),
-
-            ch_preseq_multiqc.collect{it[1]}.ifEmpty([]),
-    
+            //FASTQC_TRIMGALORE.out.fastqc_zip.collect{it[1]}.ifEmpty([]),
+            [],
+            //FASTQC_TRIMGALORE.out.trim_zip.collect{it[1]}.ifEmpty([]),
+            [],
+            //FASTQC_TRIMGALORE.out.trim_log.collect{it[1]}.ifEmpty([]),
+            [], 
+            //ch_samtools_stats.collect{it[1]}.ifEmpty([]),
+            [],
+            //ch_samtools_flagstat.collect{it[1]}.ifEmpty([]),
+            [],
+            //ch_samtools_idxstats.collect{it[1]}.ifEmpty([]),
+            [],
+            //MARK_DUPLICATES_PICARD.out.stats.collect{it[1]}.ifEmpty([]),
+            [],
+            //MARK_DUPLICATES_PICARD.out.flagstat.collect{it[1]}.ifEmpty([]),
+            [],
+            //MARK_DUPLICATES_PICARD.out.idxstats.collect{it[1]}.ifEmpty([]),
+            [],
+            //MARK_DUPLICATES_PICARD.out.metrics.collect{it[1]}.ifEmpty([]),
+            [],
+            //ch_stats_to_analyze.collect{it[1]}.ifEmpty([]),
+            [],
+            //ch_flagstats_to_analyze.collect{it[1]}.ifEmpty([]),
+            [],
+            //ch_idxstats_to_analyze.collect{it[1]}.ifEmpty([]),
+            [],
+            //ch_picardcollectmultiplemetrics_multiqc.collect{it[1]}.ifEmpty([]),
+            [],
+            //ch_preseq_multiqc.collect{it[1]}.ifEmpty([]),
+            [],
             ch_deeptoolsplotprofile_multiqc.collect{it[1]}.ifEmpty([]),
             ch_deeptoolsplotfingerprint_multiqc.collect{it[1]}.ifEmpty([]),
     

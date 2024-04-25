@@ -166,93 +166,93 @@ workflow PREPARE_GENOME {
     // Uncompress BWA index or generate from scratch if required
     //
     ch_bwa_index = Channel.empty()
-    if (prepare_tool_index == 'bwa') {
-        if (params.bwa_index) {
-            if (params.bwa_index.endsWith('.tar.gz')) {
-                ch_bwa_index = UNTAR_BWA_INDEX ( [ [:], params.bwa_index ] ).untar.map{ it[1] }
-                ch_versions  = ch_versions.mix(UNTAR_BWA_INDEX.out.versions)
-            } else {
-                ch_bwa_index = file(params.bwa_index)
-            }
-        } else {
-            ch_bwa_index = BWA_INDEX ( ch_fasta ).index
-            ch_versions  = ch_versions.mix(BWA_INDEX.out.versions)
-        }
-    }
+    // if (prepare_tool_index == 'bwa') {
+    //     if (params.bwa_index) {
+    //         if (params.bwa_index.endsWith('.tar.gz')) {
+    //             ch_bwa_index = UNTAR_BWA_INDEX ( [ [:], params.bwa_index ] ).untar.map{ it[1] }
+    //             ch_versions  = ch_versions.mix(UNTAR_BWA_INDEX.out.versions)
+    //         } else {
+    //             ch_bwa_index = file(params.bwa_index)
+    //         }
+    //     } else {
+    //         ch_bwa_index = BWA_INDEX ( ch_fasta ).index
+    //         ch_versions  = ch_versions.mix(BWA_INDEX.out.versions)
+    //     }
+    // }
 
     //
     // Uncompress Bowtie2 index or generate from scratch if required
     //
     ch_bowtie2_index = Channel.empty()
-    if (prepare_tool_index == 'bowtie2') {
-        if (params.bowtie2_index) {
-            if (params.bowtie2_index.endsWith('.tar.gz')) {
-                ch_bowtie2_index = UNTAR_BOWTIE2_INDEX ( [ [:], params.bowtie2_index ] ).untar.map{ it[1] }
-                ch_versions  = ch_versions.mix(UNTAR_BOWTIE2_INDEX.out.versions)
-            } else {
-                ch_bowtie2_index = file(params.bowtie2_index)
-            }
-        } else {
-            ch_bowtie2_index = BOWTIE2_BUILD ( ch_fasta ).index
-            ch_versions      = ch_versions.mix(BOWTIE2_BUILD.out.versions)
-        }
-    }
+    // if (prepare_tool_index == 'bowtie2') {
+    //     if (params.bowtie2_index) {
+    //         if (params.bowtie2_index.endsWith('.tar.gz')) {
+    //             ch_bowtie2_index = UNTAR_BOWTIE2_INDEX ( [ [:], params.bowtie2_index ] ).untar.map{ it[1] }
+    //             ch_versions  = ch_versions.mix(UNTAR_BOWTIE2_INDEX.out.versions)
+    //         } else {
+    //             ch_bowtie2_index = file(params.bowtie2_index)
+    //         }
+    //     } else {
+    //         ch_bowtie2_index = BOWTIE2_BUILD ( ch_fasta ).index
+    //         ch_versions      = ch_versions.mix(BOWTIE2_BUILD.out.versions)
+    //     }
+    // }
 
     //
     // Uncompress CHROMAP index or generate from scratch if required
     //
-    ch_chromap_index = Channel.empty()
-    if (prepare_tool_index == 'chromap') {
-        if (params.chromap_index) {
-            if (params.chromap_index.endsWith('.tar.gz')) {
-                ch_chromap_index = UNTAR_CHROMAP_INDEX ( [ [:], params.chromap_index ] ).untar.map{ it[1] }
-                ch_versions  = ch_versions.mix(UNTAR.out.versions)
-            } else {
-                ch_chromap_index = file(params.chromap_index)
-            }
-        } else {
-            ch_chromap_index = CHROMAP_INDEX ( ch_fasta ).index
-            ch_versions  = ch_versions.mix(CHROMAP_INDEX.out.versions)
-        }
-    }
+     ch_chromap_index = Channel.empty()
+    // if (prepare_tool_index == 'chromap') {
+    //     if (params.chromap_index) {
+    //         if (params.chromap_index.endsWith('.tar.gz')) {
+    //             ch_chromap_index = UNTAR_CHROMAP_INDEX ( [ [:], params.chromap_index ] ).untar.map{ it[1] }
+    //             ch_versions  = ch_versions.mix(UNTAR.out.versions)
+    //         } else {
+    //             ch_chromap_index = file(params.chromap_index)
+    //         }
+    //     } else {
+    //         ch_chromap_index = CHROMAP_INDEX ( ch_fasta ).index
+    //         ch_versions  = ch_versions.mix(CHROMAP_INDEX.out.versions)
+    //     }
+    // }
 
     //
     // Uncompress STAR index or generate from scratch if required
     //
     ch_star_index = Channel.empty()
-    if (prepare_tool_index == 'star') {
-        if (params.star_index) {
-            if (params.star_index.endsWith('.tar.gz')) {
-                ch_star_index = UNTAR_STAR_INDEX ( [ [:], params.star_index ] ).untar.map{ it[1] }
-                ch_versions   = ch_versions.mix(UNTAR_STAR_INDEX.out.versions)
-            } else {
-                ch_star_index = file(params.star_index)
-            }
-        } else {
-            ch_star_index = STAR_GENOMEGENERATE ( ch_fasta, ch_gtf ).index
-            ch_versions   = ch_versions.mix(STAR_GENOMEGENERATE.out.versions)
-        }
+    // if (prepare_tool_index == 'star') {
+    //     if (params.star_index) {
+    //         if (params.star_index.endsWith('.tar.gz')) {
+    //             ch_star_index = UNTAR_STAR_INDEX ( [ [:], params.star_index ] ).untar.map{ it[1] }
+    //             ch_versions   = ch_versions.mix(UNTAR_STAR_INDEX.out.versions)
+    //         } else {
+    //             ch_star_index = file(params.star_index)
+    //         }
+    //     } else {
+    //         ch_star_index = STAR_GENOMEGENERATE ( ch_fasta, ch_gtf ).index
+    //         ch_versions   = ch_versions.mix(STAR_GENOMEGENERATE.out.versions)
+    //     }
 
-        if( params.spikein_genome ){
-        if ( params.star_spikeref_index  ) { //TODO add a control of param fasta is settend, if not setted not do this
-            if (params.star_spikeref_index.endsWith('.tar.gz')) {
-                ch_star_hydrid_index = UNTAR_STAR_INDEX ( [ [:], params.star_spikeref_index ] ).untar.map{ it[1] }
-                ch_versions   = ch_versions.mix(UNTAR_STAR_INDEX.out.versions)
-            } else {
-                ch_star_hydrid_index = file(params.star_spikeref_index)
-            }
-        } else {
-            ch_spikein_ref = MERGE_SPIKEIN_REF (ch_fasta, ch_fasta_spikein, ch_gtf, ch_gtf_spikein)
-            ch_star_hydrid_index = STAR_HYBRIDGENOMEGENERATE ( MERGE_SPIKEIN_REF.out.fasta, MERGE_SPIKEIN_REF.out.gtf ).index 
-            ch_versions   = ch_versions.mix(STAR_GENOMEGENERATE.out.versions)
-        }
-        }else{
-            ch_spikein_ref = null
-            ch_star_hydrid_index = null
+    //     if( params.spikein_genome ){
+    //     if ( params.star_spikeref_index  ) { //TODO add a control of param fasta is settend, if not setted not do this
+    //         if (params.star_spikeref_index.endsWith('.tar.gz')) {
+    //             ch_star_hydrid_index = UNTAR_STAR_INDEX ( [ [:], params.star_spikeref_index ] ).untar.map{ it[1] }
+    //             ch_versions   = ch_versions.mix(UNTAR_STAR_INDEX.out.versions)
+    //         } else {
+    //             ch_star_hydrid_index = file(params.star_spikeref_index)
+    //         }
+    //     } else {
+    //         ch_spikein_ref = MERGE_SPIKEIN_REF (ch_fasta, ch_fasta_spikein, ch_gtf, ch_gtf_spikein)
+    //         ch_star_hydrid_index = STAR_HYBRIDGENOMEGENERATE ( MERGE_SPIKEIN_REF.out.fasta, MERGE_SPIKEIN_REF.out.gtf ).index 
+    //         ch_versions   = ch_versions.mix(STAR_GENOMEGENERATE.out.versions)
+    //     }
+    //     }else{
+    //         ch_spikein_ref = null
+    //         ch_star_hydrid_index = null
 
-       }
+    //    }
         
-    }
+    // }
 
     emit:
     fasta         = ch_fasta                  //    path: genome.fasta
@@ -266,6 +266,6 @@ workflow PREPARE_GENOME {
     bowtie2_index = ch_bowtie2_index          //    path: bowtie2/index/
     chromap_index = ch_chromap_index          //    path: genome.index
     star_index    = ch_star_index             //    path: star/index/
-    star_spikein_ref_index = ch_star_hydrid_index
+    //star_spikein_ref_index = ch_star_hydrid_index
     versions    = ch_versions.ifEmpty(null) // channel: [ versions.yml ]
 }
