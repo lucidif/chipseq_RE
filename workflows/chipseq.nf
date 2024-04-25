@@ -401,7 +401,7 @@ workflow CHIPSEQ {
         | splitCsv (header: true)
         | map { row -> 
             ssinfo = row.subMap ('sample', 'single_end','antibody','control','bam')
-            [[id:ssinfo.id, single_end:ssinfo.single_end, condition:ssinfo.condition, details:ssinfo.details, analysis:ssinfo.analysis], ssinfo.bam]
+            [[id:ssinfo.sample, single_end:ssinfo.single_end, antibody:ssinfo.antibody, control:ssinfo.control], ssinfo.bam]
     }
 
     //ch_bamfiles.view()
@@ -433,7 +433,11 @@ workflow CHIPSEQ {
 
     SAMTOOLS_INDEX(ch_bamfiles)
 
+    //ch_bamfiles.view()
+
     ch_deepcov=ch_bamfiles.join(SAMTOOLS_INDEX.out.bai, by: [0])
+
+    //ch_deepcov.view()
 
     BAM_STATS_SAMTOOLS(ch_deepcov)
     ch_flagstats_to_analyze=BAM_STATS_SAMTOOLS.out.flagstat
@@ -515,14 +519,69 @@ workflow CHIPSEQ {
     //     .set { ch_genome_bam_bai }
     // }
     
-    ch_deepcov
-        .combine(ch_deepcov)
-        .map { 
-            meta1, bam1, bai1, meta2, bam2, bai2 ->
-                meta1.control == meta2.id ? [ meta1, [ bam1, bam2 ], [ bai1, bai2 ] ] : null
+    //ch_deepcov.view()
+
+    //extract and format bam file of sample and its input from ss in 
+    ch_deepcov.map { meta, bam, bai ->
+        meta.control == "" ? null : [meta.control, meta, bam]
+    }set{ch_byctr}
+    //ch_byctr.view()
+
+    ch_deepcov.map { meta, bam, bai ->
+        [meta.id, meta, bam]
+    }set{ch_byname}
+    //ch_byname.view()
+
+    ch_byctr
+        .combine(ch_byname)
+        .map{
+            identifier, meta1, bam1, identifier2 ,meta2, bam2 ->
+            meta1.control == meta2.id ? [meta1.id,meta1,[bam1, bam2]] : null
+            
         }
-        .set { ch_ip_control_bam_bai }
+        .set { ch_cmb }
+
+
+    //same but with indeces
     
+    ch_deepcov.map { meta, bam, bai ->
+        meta.control == "" ? null : [meta.control, meta, bai]
+    }set{ch_bai_byctr}
+    //ch_byctr.view()
+
+    ch_deepcov.map { meta, bam, bai ->
+        [meta.id, meta, bai]
+    }set{ch_bai_byname}
+    //ch_byname.view()
+
+    ch_bai_byctr
+        .combine(ch_bai_byname)
+        .map{
+            identifier, meta1, bai1, identifier2 ,meta2, bai2 ->
+            meta1.control == meta2.id ? [meta1.id,meta1,[bai1, bai2]] : null
+            
+        }
+        .set { ch_bai_cmb }
+
+    ch_cmb.combine(ch_bai_cmb)
+        .map{ id, meta1, bam, id2 ,meta2, bai ->
+            [meta1,bam, bai]
+        }
+        .set{ch_ip_control_bam_bai}
+
+    //ch_ip_control_bam_bai.view()
+
+
+    // ch_deepcov
+    //     .combine(ch_deepcov)
+    //     .map { 
+    //         meta1, bam1, bai1, meta2, bam2, bai2 ->
+    //             meta1.control == meta2.id ? [ meta1, [ bam1, bam2 ], [ bai1, bai2 ] ] : null
+    //     }
+    //     .set { ch_ip_control_bam_bai }
+    
+    //ch_ip_control_bam_bai.view()
+
     //
     // MODULE: deepTools plotFingerprint joint QC for IP and control
     //
@@ -553,6 +612,8 @@ workflow CHIPSEQ {
     }
 
     // Create channels: [ meta, ip_bam, control_bam ]
+    
+
     ch_ip_control_bam_bai
         .map { 
             meta, bams, bais -> 
@@ -560,9 +621,13 @@ workflow CHIPSEQ {
         }
         .set { ch_ip_control_bam }
 
+    //ch_ip_control_bam.view()
     //
     // MODULE: Call peaks with MACS2
     //
+
+    //ch_ip_control_bam.view()
+
     MACS2_CALLPEAK (
         ch_ip_control_bam,
         ch_macs_gsize
@@ -578,7 +643,17 @@ workflow CHIPSEQ {
         .filter { meta, peaks -> peaks.size() > 0 }
         .set { ch_macs2_peaks }
 
+    //ch_macs2_peaks.view()
     // Create channels: [ meta, ip_bam, peaks ]
+    //ch_ip_control_bam.view()
+    //ch_macs2_peaks.view()
+    test=ch_ip_control_bam
+        .join(ch_macs2_peaks, by: [0])
+
+    //test.view()
+
+    //test.view()
+
     ch_ip_control_bam
         .join(ch_macs2_peaks, by: [0])
         .map { 
@@ -586,7 +661,7 @@ workflow CHIPSEQ {
                 [ it[0], it[1], it[3] ] 
         }
         .set { ch_ip_bam_peaks }
-
+    //ch_ip_bam_peaks.view()
     //
     // MODULE: Calculate FRiP score
     //
@@ -658,10 +733,14 @@ workflow CHIPSEQ {
     if (!params.skip_consensus_peaks) {
         // Create channels: [ meta , [ peaks ] ]
             // Where meta = [ id:antibody, multiple_groups:true/false, replicates_exist:true/false ]
+
+        ch_macs2_peaks.view()
+
         ch_macs2_peaks
             .map { 
                 meta, peak -> 
-                    [ meta.antibody, meta.id.split('_')[0..-2].join('_'), peak ] 
+                    //[ meta.antibody, meta.id.split('_')[0..-2].join('_'), peak ]
+                    [ meta.antibody, meta.id, peak ] 
             }
             .groupTuple()
             .map {
@@ -681,6 +760,7 @@ workflow CHIPSEQ {
                     [ meta_new, peaks ] 
             }
             .set { ch_antibody_peaks }
+
 
         //
         // MODULE: Generate consensus peaks across samples
@@ -713,6 +793,7 @@ workflow CHIPSEQ {
         }
 
         // Create channels: [ antibody, [ ip_bams ] ]
+
         ch_ip_control_bam
             .map { 
                 meta, ip_bam, control_bam ->
