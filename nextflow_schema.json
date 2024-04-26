@@ -319,6 +319,12 @@
                     "fa_icon": "fas fa-save",
                     "description": "Disable quality control steps",
                     "help_text": "Disable quality control steps"   
+                },
+                "remove_duplicates" : {
+                    "type": "boolean",
+                    "fa_icon": "fas fa-save",
+                    "description": "remove duplicates if are present",
+                    "help_text": "remove duplicates if are present"
                 }
             }
         },

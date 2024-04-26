@@ -79,6 +79,7 @@ include { IGV                                 } from '../modules/local/igv'
 include { MULTIQC                             } from '../modules/local/multiqc'
 include { MULTIQC_CUSTOM_PHANTOMPEAKQUALTOOLS } from '../modules/local/multiqc_custom_phantompeakqualtools'
 include { MULTIQC_CUSTOM_PEAKS                } from '../modules/local/multiqc_custom_peaks'
+include { BAM_REMOVE_DUPLICATES               } from '../modules/local/bam_remove_dup'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -115,6 +116,7 @@ include { SUBREAD_FEATURECOUNTS         } from '../modules/nf-core/modules/subre
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
 include { SAMTOOLS_FAIDX                } from '../modules/nf-core/modules/samtools/faidx/main'
 include { SAMTOOLS_INDEX                } from '../modules/nf-core/modules/samtools/index/main'
+include { SAMTOOLS_INDEX      as PREDUP_INDEX } from '../modules/nf-core/modules/samtools/index/main'
 include { DEEPTOOLS_BAMCOVERAGE         } from '../modules/nf-core/modules/deeptools/bamcoverage/main'
 
 include { HOMER_ANNOTATEPEAKS as HOMER_ANNOTATEPEAKS_MACS2     } from '../modules/nf-core/modules/homer/annotatepeaks/main'
@@ -406,6 +408,25 @@ workflow CHIPSEQ {
 
     //ch_bamfiles.view()
 
+
+    if (params.remove_duplicates) {
+        PREDUP_INDEX(ch_bamfiles)
+        ch_prebai=ch_bamfiles.join(PREDUP_INDEX.out.bai, by: [0])
+        BAM_REMOVE_DUPLICATES (
+                ch_prebai,
+                []
+            )
+        ch_bam_in=BAM_REMOVE_DUPLICATES.out.bam    
+    }else{
+        ch_bam_in=ch_bamfiles
+    }
+
+    SAMTOOLS_INDEX(ch_bamfiles)
+    ch_bam_bai_in=ch_bamfiles.join(SAMTOOLS_INDEX.out.bai, by: [0])
+
+
+    //ch_bamfiles.view()
+
     //
     // MODULE: Phantompeaktools strand cross-correlation and QC metrics
     //
@@ -431,19 +452,15 @@ workflow CHIPSEQ {
     //ch_bam_to_analyze
     //ch_bam_to_analyze.view()
 
-    SAMTOOLS_INDEX(ch_bamfiles)
-
-    //ch_bamfiles.view()
-
-    ch_deepcov=ch_bamfiles.join(SAMTOOLS_INDEX.out.bai, by: [0])
+    
 
     //ch_deepcov.view()
 
-    BAM_STATS_SAMTOOLS(ch_deepcov)
+    BAM_STATS_SAMTOOLS(ch_bam_bai_in)
     ch_flagstats_to_analyze=BAM_STATS_SAMTOOLS.out.flagstat
 
     DEEPTOOLS_BAMCOVERAGE (
-        ch_deepcov,
+        ch_bam_bai_in,
         params.fasta,
         faidx_path
     )
@@ -522,12 +539,12 @@ workflow CHIPSEQ {
     //ch_deepcov.view()
 
     //extract and format bam file of sample and its input from ss in 
-    ch_deepcov.map { meta, bam, bai ->
+    ch_bam_bai_in.map { meta, bam, bai ->
         meta.control == "" ? null : [meta.control, meta, bam]
     }set{ch_byctr}
     //ch_byctr.view()
 
-    ch_deepcov.map { meta, bam, bai ->
+    ch_bam_bai_in.map { meta, bam, bai ->
         [meta.id, meta, bam]
     }set{ch_byname}
     //ch_byname.view()
@@ -544,12 +561,12 @@ workflow CHIPSEQ {
 
     //same but with indeces
     
-    ch_deepcov.map { meta, bam, bai ->
+    ch_bam_bai_in.map { meta, bam, bai ->
         meta.control == "" ? null : [meta.control, meta, bai]
     }set{ch_bai_byctr}
     //ch_byctr.view()
 
-    ch_deepcov.map { meta, bam, bai ->
+    ch_bam_bai_in.map { meta, bam, bai ->
         [meta.id, meta, bai]
     }set{ch_bai_byname}
     //ch_byname.view()
@@ -734,7 +751,7 @@ workflow CHIPSEQ {
         // Create channels: [ meta , [ peaks ] ]
             // Where meta = [ id:antibody, multiple_groups:true/false, replicates_exist:true/false ]
 
-        ch_macs2_peaks.view()
+        //ch_macs2_peaks.view()
 
         ch_macs2_peaks
             .map { 
