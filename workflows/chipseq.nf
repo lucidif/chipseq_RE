@@ -112,6 +112,15 @@ include { DEEPTOOLS_PLOTHEATMAP         } from '../modules/nf-core/modules/deept
 include { DEEPTOOLS_PLOTFINGERPRINT     } from '../modules/nf-core/modules/deeptools/plotfingerprint/main'
 include { KHMER_UNIQUEKMERS             } from '../modules/nf-core/modules/khmer/uniquekmers/main'
 include { MACS2_CALLPEAK                } from '../modules/nf-core/modules/macs2/callpeak/main'
+include { MACS2_CALLPEAK  as MACS2_CALLPEAK_NARROW } from '../modules/nf-core/modules/macs2/callpeak/main'
+include { MACS2_CALLPEAK  as MACS2_CALLPEAK_BROAD } from '../modules/nf-core/modules/macs2/callpeak/main'
+
+include { MACS2_CALLPEAK  as MACS2_CALLPEAK_BROAD_06 } from '../modules/nf-core/modules/macs2/callpeak/main'
+include { MACS2_CALLPEAK  as MACS2_CALLPEAK_BROAD_01 } from '../modules/nf-core/modules/macs2/callpeak/main'
+
+include { MACS2_CALLPEAK  as MACS2_CALLPEAK_NARROW_06 } from '../modules/nf-core/modules/macs2/callpeak/main'
+include { MACS2_CALLPEAK  as MACS2_CALLPEAK_NARROW_01 } from '../modules/nf-core/modules/macs2/callpeak/main'
+
 include { SUBREAD_FEATURECOUNTS         } from '../modules/nf-core/modules/subread/featurecounts/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
 include { SAMTOOLS_FAIDX                } from '../modules/nf-core/modules/samtools/faidx/main'
@@ -553,8 +562,7 @@ workflow CHIPSEQ {
         .combine(ch_byname)
         .map{
             identifier, meta1, bam1, identifier2 ,meta2, bam2 ->
-            meta1.control == meta2.id ? [meta1.id,meta1,[bam1, bam2]] : null
-            
+            meta1.control == meta2.id ? [meta1.id,meta1,[bam1, bam2]] : null    
         }
         .set { ch_cmb }
 
@@ -651,6 +659,134 @@ workflow CHIPSEQ {
     )
     ch_versions = ch_versions.mix(MACS2_CALLPEAK.out.versions.first())
 
+    // if (params.narrow_peak) {
+    //     MACS2_CALLPEAK_BROAD (
+    //     ch_ip_control_bam,
+    //     ch_macs_gsize  
+    //     )
+    //     ch_alternative_peaks=MACS2_CALLPEAK_BROAD.out.peak 
+    // } else {
+    //     MACS2_CALLPEAK_NARROW (
+    //     ch_ip_control_bam,
+    //     ch_macs_gsize  
+    //     )
+    //     ch_alternative_peaks=MACS2_CALLPEAK_NARROW.out.peak
+    // }
+
+    // ch_ip_control_bam_alt=ch_ip_control_bam.map{meta_alt, path1_alt, path2_alt -> 
+    //     meta_alt.id = meta_alt.id + "_alt"
+    //    [meta_alt, path1_alt, path2_alt] 
+    // }
+
+    // ch_peaks_alt=ch_alternative_peaks.map{meta_peaks_alt, path_peaks_alt ->
+    //     meta_peaks_alt.id = meta_peaks_alt.id + "_alt"
+    //     [meta_peaks_alt, path_peaks_alt]
+    // }
+
+    // ch_ip_control_bam_alt
+    //     .join(ch_peaks_alt, by: [0])
+    //     .map { 
+    //         it -> 
+    //             [ it[0], it[1], it[3] ] 
+    //     }
+    // .set { ch_ip_bam_peaks_alt }
+    
+    // ch_ip_control_bam.view()
+    // MACS2_CALLPEAK_NARROW_01 (
+    //     ch_ip_control_bam,
+    //     ch_macs_gsize
+    // )
+
+    // ch_ip_control_bam_nar01=ch_ip_control_bam.map{meta_nar01, path1_nar01, path2_nar01 -> 
+    //     meta_nar01.id = meta_nar01.id + "_nar01"
+    //    [meta_nar01, path1_nar01, path2_nar01] 
+    // }
+
+    // ch_peaks_nar01=MACS2_CALLPEAK_NARROW_01.out.peak.map{meta_peaks_nar01, path_peaks_nar01 ->
+    //     meta_peaks_nar01.id = meta_peaks_nar01.id + "_nar01"
+    //     [meta_peaks_nar01, path_peaks_nar01]
+    // }
+
+    // ch_ip_control_bam_nar01
+    //     .join(ch_peaks_nar01, by: [0])
+    //     .map { 
+    //         it -> 
+    //             [ it[0], it[1], it[3] ] 
+    //     }
+    // .set { ch_ip_bam_peaks_nar01 }
+    // ch_ip_bam_peaks_nar01.view()
+
+    // MACS2_CALLPEAK_NARROW_06 (
+    //     ch_ip_control_bam,
+    //     ch_macs_gsize
+    // )
+
+    // ch_ip_control_bam_nar06=ch_ip_control_bam.map{meta_nar06, path1_nar06, path2_nar06 -> 
+    //     meta_nar06.id = meta_nar06.id + "_nar06"
+    //    [meta_nar06, path1_nar06, path2_nar06] 
+    // }
+
+    // ch_peaks_nar06=MACS2_CALLPEAK_NARROW_06.out.peak.map{meta_peaks_nar06, path_peaks_nar06 ->
+    //     meta_peaks_nar06.id = meta_peaks_nar06.id + "_nar06"
+    //     [meta_peaks_nar06, path_peaks_nar06]
+    // }
+
+    // ch_ip_control_bam_nar06
+    //     .join(ch_peaks_nar06, by: [0])
+    //     .map { 
+    //         it -> 
+    //             [ it[0], it[1], it[3] ] 
+    //     }
+    // .set { ch_ip_bam_peaks_nar06 }
+
+    // MACS2_CALLPEAK_BROAD_01 (
+    //     ch_ip_control_bam,
+    //     ch_macs_gsize
+    // )
+
+    // ch_ip_control_bam_brd01=ch_ip_control_bam.map{meta_brd01, path1_brd01, path2_brd01 -> 
+    //     meta_brd01.id = meta_brd01.id + "_brd01"
+    //    [meta_brd01, path1_brd01, path2_brd01] 
+    // }
+
+
+    // ch_peaks_brd01=MACS2_CALLPEAK_BROAD_01.out.peak.map{meta_peaks_brd01, path_peaks_brd01 ->
+    //     meta_peaks_brd01.id = meta_peaks_brd01.id + "_brd01"
+    //     [meta_peaks_brd01, path_peaks_brd01]
+    // }
+
+    // ch_ip_control_bam_brd01
+    //     .join(ch_peaks_brd01, by: [0])
+    //     .map { 
+    //         it -> 
+    //             [ it[0], it[1], it[3] ] 
+    //     }
+    // .set { ch_ip_bam_peaks_brd01 }
+
+    // MACS2_CALLPEAK_BROAD_06 (
+    //     ch_ip_control_bam,
+    //     ch_macs_gsize
+    // )
+
+    // ch_ip_control_bam_brd06=ch_ip_control_bam.map{meta_brd06, path1_brd06, path2_brd06 -> 
+    //     meta_brd06.id = meta_brd06.id + "_brd06"
+    //    [meta_brd06, path1_brd06, path2_brd06] 
+    // }
+
+    // ch_peaks_brd06=MACS2_CALLPEAK_BROAD_06.out.peak.map{meta_peaks_brd06, path_peaks_brd06 ->
+    //     meta_peaks_brd06.id = meta_peaks_brd06.id + "_brd06"
+    //     [meta_peaks_brd06, path_peaks_brd06]
+    // }
+
+    // ch_ip_control_bam_brd06
+    //     .join(ch_peaks_brd06, by: [0])
+    //     .map { 
+    //         it -> 
+    //             [ it[0], it[1], it[3] ] 
+    //     }
+    // .set { ch_ip_bam_peaks_brd06 }
+
+
     //
     // Filter out samples with 0 MACS2 peaks called
     //
@@ -664,10 +800,10 @@ workflow CHIPSEQ {
     // Create channels: [ meta, ip_bam, peaks ]
     //ch_ip_control_bam.view()
     //ch_macs2_peaks.view()
-    test=ch_ip_control_bam
-        .join(ch_macs2_peaks, by: [0])
+    // test=ch_ip_control_bam
+    //    .join(ch_macs2_peaks, by: [0])
 
-    //test.view()
+    // test.view()
 
     //test.view()
 
