@@ -1,6 +1,12 @@
-file<-"/mnt/datawk1/analysis/Lara/test_chipseq_dowstream/nfout/narrow_0_1/star/mergedLibrary/macs2/narrowPeak/Anti-GFP.mLb.mkD.sorted_peaks.narrowPeak"
+#!/usr/bin/env Rscript
 
-outpath<-"/mnt/datawk1/analysis/Lara/test_chipseq_dowstream/nfout/narrow_0_1/star/mergedLibrary/macs2/narrowPeak/"
+args <- commandArgs(trailingOnly = TRUE)
+
+file <- args[1]
+outpath<- args[2]
+
+#file<-"/mnt/datawk1/analysis/Lara/test_chipseq_dowstream/nfout/narrow_0_1/star/mergedLibrary/macs2/narrowPeak/Anti-GFP.mLb.mkD.sorted_peaks.narrowPeak"
+#outpath<-"/mnt/datawk1/analysis/Lara/test_chipseq_dowstream/nfout/narrow_0_1/star/mergedLibrary/macs2/narrowPeak/"
 
 
 splitpath=strsplit(file,"/")
