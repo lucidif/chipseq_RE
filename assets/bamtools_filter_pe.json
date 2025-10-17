@@ -4,8 +4,11 @@
 
         { "id": "insert_max", "insertSize": "<=2000" },
 
-        { "id": "mismatch", "tag": "NM:<=4" }
+        { "id": "mismatch", "tag": "NM:<=4" },
+
+        { "id": "mismatchnM",  "tag": "nM:<=4" }
+
     ],
 
-    "rule": " insert_min & insert_max & mismatch "
+    "rule": " insert_min & insert_max & ( mismatch | mismatchnM ) "
 }
